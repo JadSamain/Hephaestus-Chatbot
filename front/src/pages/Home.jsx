@@ -3,7 +3,7 @@ import "../App.css";
 
 export default function Home() {
     return (
-        <div className="page">
+        <div className="page home-page">
             <section className="hero">
                 <h1>POPCORN</h1>
                 <p>
