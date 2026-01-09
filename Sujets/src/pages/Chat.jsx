@@ -51,7 +51,7 @@ export default function Chat() {
                 <div className="chat-header">
                     <h2>
                         <span className="status-indicator"></span>
-                        MeteoBot Chat
+                        CineBot Chat
                     </h2>
                     <Link to="/" className="back-btn">
                         ← Retour
@@ -61,15 +61,15 @@ export default function Chat() {
                 <div className="chat-messages">
                     {messages.length === 0 ? (
                         <div className="empty-state">
-                            <div className="empty-state-icon">💬</div>
+                            <div className="empty-state-icon">🎬</div>
                             <h3>Commencez une conversation</h3>
-                            <p>Posez-moi des questions sur la météo !</p>
+                            <p>Recherchez un film ou une série et découvrez où le regarder !</p>
                         </div>
                     ) : (
                         messages.map((message) => (
                             <div key={message.id} className={`message ${message.sender}`}>
                                 <div className="message-avatar">
-                                    {message.sender === "user" ? "👤" : "🤖"}
+                                    {message.sender === "user" ? "👤" : "🎬"}
                                 </div>
                                 <div className="message-content">
                                     <p>{message.text}</p>
@@ -82,9 +82,9 @@ export default function Chat() {
                     )}
                     {isLoading && (
                         <div className="message bot">
-                            <div className="message-avatar">🤖</div>
+                            <div className="message-avatar">🎬</div>
                             <div className="message-content">
-                                <p>En train d'écrire...</p>
+                                <p>Recherche en cours...</p>
                             </div>
                         </div>
                     )}
@@ -96,7 +96,7 @@ export default function Chat() {
                         <input
                             type="text"
                             className="chat-input"
-                            placeholder="Demandez-moi la météo..."
+                            placeholder="Ex: Où puis-je regarder Inception ?"
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
                             disabled={isLoading}

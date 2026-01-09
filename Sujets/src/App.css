@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700;900&display=swap');
 
 /* Global Styles */
 * {
@@ -9,7 +9,7 @@
 
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a0a0f 50%, #0f0a0a 100%);
   min-height: 100vh;
   color: #fff;
 }
@@ -25,7 +25,7 @@ body {
   overflow: hidden;
 }
 
-/* Animated Background */
+/* Animated Background - Cinema Spotlight Effect */
 .page::before {
   content: '';
   position: absolute;
@@ -34,8 +34,8 @@ body {
   right: 0;
   bottom: 0;
   background:
-    radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
-    radial-gradient(circle at 80% 80%, rgba(99, 102, 241, 0.3) 0%, transparent 50%);
+    radial-gradient(circle at 20% 50%, rgba(255, 215, 0, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(220, 20, 60, 0.15) 0%, transparent 50%);
   animation: backgroundPulse 15s ease-in-out infinite;
   pointer-events: none;
 }
@@ -74,13 +74,14 @@ body {
 
 .hero h1 {
   font-size: clamp(3rem, 8vw, 6rem);
-  font-weight: 700;
+  font-weight: 900;
   margin-bottom: 1.5rem;
-  background: linear-gradient(135deg, #fff 0%, #e0e7ff 100%);
+  font-family: 'Playfair Display', serif;
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FF6347 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  text-shadow: 0 0 40px rgba(255, 255, 255, 0.3);
+  text-shadow: 0 0 60px rgba(255, 215, 0, 0.5);
   letter-spacing: -0.02em;
 }
 
@@ -102,10 +103,10 @@ body {
   font-size: 1.1rem;
   font-weight: 600;
   text-decoration: none;
-  color: #fff;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: #0a0a0a;
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
   border-radius: 50px;
-  box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 10px 30px rgba(255, 215, 0, 0.4);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
@@ -128,7 +129,7 @@ body {
 
 .btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 15px 40px rgba(99, 102, 241, 0.6);
+  box-shadow: 0 15px 40px rgba(255, 215, 0, 0.6);
 }
 
 .btn:active {
@@ -140,11 +141,11 @@ body {
   width: 100%;
   max-width: 1200px;
   height: 85vh;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(10, 10, 10, 0.7);
   backdrop-filter: blur(20px);
   border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(255, 215, 0, 0.3);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(255, 215, 0, 0.1);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -172,9 +173,9 @@ body {
 .chat-header .status-indicator {
   width: 10px;
   height: 10px;
-  background: #10b981;
+  background: #FFD700;
   border-radius: 50%;
-  box-shadow: 0 0 10px #10b981;
+  box-shadow: 0 0 10px #FFD700;
   animation: pulse 2s ease-in-out infinite;
 }
 
@@ -263,18 +264,18 @@ body {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 600;
   flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.4);
 }
 
 .message.bot .message-avatar {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+  background: linear-gradient(135deg, #DC143C 0%, #8B0000 100%);
+  box-shadow: 0 4px 12px rgba(220, 20, 60, 0.4);
 }
 
 .message-content {
@@ -287,8 +288,10 @@ body {
 }
 
 .message.user .message-content {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
   border: none;
+  color: #0a0a0a;
+  font-weight: 500;
 }
 
 /* Chat Input */
@@ -323,26 +326,26 @@ body {
 
 .chat-input:focus {
   background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.4);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+  border-color: rgba(255, 215, 0, 0.6);
+  box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.2);
 }
 
 .send-btn {
   padding: 1rem 2rem;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
   border: none;
   border-radius: 24px;
-  color: #fff;
+  color: #0a0a0a;
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.4);
 }
 
 .send-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.6);
+  box-shadow: 0 6px 16px rgba(255, 215, 0, 0.6);
 }
 
 .send-btn:active {
