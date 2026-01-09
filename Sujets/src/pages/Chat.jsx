@@ -29,20 +29,48 @@ export default function Chat() {
         };
 
         setMessages(prev => [...prev, userMessage]);
+        const currentInput = inputValue;
         setInputValue("");
         setIsLoading(true);
 
-        // Simuler une réponse du bot (à remplacer par votre API)
-        setTimeout(() => {
+        try {
+            // Appel à l'API backend
+            const response = await fetch('http://localhost:8000/chat/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ prompt: currentInput })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Erreur HTTP: ${response.status}`);
+            }
+
+            const data = await response.json();
+
             const botMessage = {
                 id: Date.now() + 1,
-                text: "En cours",
+                text: data.response || "Désolé, je n'ai pas pu générer une réponse.",
                 sender: "bot",
                 timestamp: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
             };
+
             setMessages(prev => [...prev, botMessage]);
+        } catch (error) {
+            console.error('Erreur lors de l\'appel à l\'API:', error);
+
+            const errorMessage = {
+                id: Date.now() + 1,
+                text: "Désolé, une erreur s'est produite. Assurez-vous que le serveur backend est en cours d'exécution sur http://localhost:8000",
+                sender: "bot",
+                timestamp: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+            };
+
+            setMessages(prev => [...prev, errorMessage]);
+        } finally {
             setIsLoading(false);
-        }, 1000);
+        }
     };
 
     return (
