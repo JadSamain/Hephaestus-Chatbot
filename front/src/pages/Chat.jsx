@@ -79,7 +79,7 @@ export default function Chat() {
                 <div className="chat-header">
                     <h2>
                         <span className="status-indicator"></span>
-                        CineBot Chat
+                        POPCORN Chat
                     </h2>
                     <Link to="/" className="back-btn">
                         ← Retour

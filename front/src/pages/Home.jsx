@@ -12,7 +12,7 @@ export default function Home() {
                     et obtenez les notes IMDb instantanément !
                 </p>
                 <Link className="btn" to="/chat">
-                    🍿 Découvrir des films
+                    Découvrir des films
                 </Link>
             </section>
         </div>
