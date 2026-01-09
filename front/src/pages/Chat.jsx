@@ -41,6 +41,7 @@ export default function Chat() {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ prompt: currentInput })
+
             });
 
             if (!response.ok) {
@@ -74,7 +75,7 @@ export default function Chat() {
     };
 
     return (
-        <div className="page">
+        <div className="page chat-page">
             <div className="chat-container">
                 <div className="chat-header">
                     <h2>
