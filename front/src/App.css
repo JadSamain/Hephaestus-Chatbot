@@ -38,6 +38,16 @@ body {
   overflow: hidden;
 }
 
+/* Fullscreen layout for home page */
+.page.home-page {
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
 /* Animated Background - Cinema Spotlight Effect */
 .page::before {
   content: '';
