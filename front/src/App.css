@@ -11,11 +11,14 @@ body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   background: linear-gradient(135deg, #0a0a0a 0%, #1a0a0f 50%, #0f0a0a 100%);
   min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
+  /* Prevent body scroll, handle scroll in containers */
   color: #fff;
 }
 
 .page {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -28,8 +31,11 @@ body {
 /* Fullscreen layout for chat page - like ChatGPT */
 .page.chat-page {
   padding: 0;
-  justify-content: stretch;
+  width: 100vw;
+  height: 100vh;
+  justify-content: flex-start;
   align-items: stretch;
+  overflow: hidden;
 }
 
 /* Animated Background - Cinema Spotlight Effect */
@@ -146,7 +152,7 @@ body {
 /* Chat Container - Fullscreen like ChatGPT */
 .chat-container {
   width: 100%;
-  height: 100vh;
+  height: 100%;
   background: rgba(10, 10, 10, 0.95);
   backdrop-filter: blur(20px);
   border-radius: 0;
@@ -314,6 +320,7 @@ body {
   display: flex;
   justify-content: center;
   flex-shrink: 0;
+  width: 100%;
 }
 
 .chat-input-wrapper {
