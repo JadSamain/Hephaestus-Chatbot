@@ -89,6 +89,29 @@ export default function Chat() {
         setConversations(newConversations);
     };
 
+    const deleteConversation = (e, chatId) => {
+        e.stopPropagation(); // Pour ne pas ouvrir la conversation en cliquant sur supprimer
+
+        if (confirm("Supprimer cette conversation ?")) {
+            let newConversations = [];
+            for (let i = 0; i < conversations.length; i++) {
+                if (conversations[i].id !== chatId) {
+                    newConversations.push(conversations[i]);
+                }
+            }
+            setConversations(newConversations);
+
+            // Si on supprime la conversation active, on en crée une nouvelle ou on change
+            if (chatId === currentChatId) {
+                if (newConversations.length > 0) {
+                    loadConversation(newConversations[0].id);
+                } else {
+                    createNewChat();
+                }
+            }
+        }
+    };
+
     const handleSendMessage = async (e) => {
         e.preventDefault();
 
@@ -180,7 +203,13 @@ export default function Chat() {
                             onClick={() => loadConversation(chat.id)}
                         >
                             <span className="history-item-icon">💬</span>
-                            {chat.title}
+                            <span className="history-item-title">{chat.title}</span>
+                            <button
+                                className="delete-conv-btn"
+                                onClick={(e) => deleteConversation(e, chat.id)}
+                            >
+                                🗑️
+                            </button>
                         </div>
                     ))}
                 </div>

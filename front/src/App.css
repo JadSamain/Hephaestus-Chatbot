@@ -234,12 +234,38 @@ body {
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s ease;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  justify-content: space-between;
+  /* Espace entre le titre et le bouton */
+}
+
+.history-item-title {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.delete-conv-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  opacity: 0;
+  /* Caché par défaut */
+  transition: opacity 0.2s;
+  padding: 2px;
+}
+
+.history-item:hover .delete-conv-btn {
+  opacity: 1;
+  /* Visible au survol */
+}
+
+.delete-conv-btn:hover {
+  transform: scale(1.2);
 }
 
 .history-item:hover,
