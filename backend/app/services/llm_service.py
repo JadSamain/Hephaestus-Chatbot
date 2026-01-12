@@ -1,24 +1,47 @@
 import ollama
-from ollama import AsyncClient
+
+# --- 1. DÉFINITION DU SYSTEM PROMPT ---
+SYSTEM_PROMPT = """
+Tu es l'intelligence centrale du backend "Popcorn".
+Tu disposes de l'outil : `get_movie_data(title: string)`.
+
+RÈGLES STRICTES :
+1. Si l'utilisateur demande une info sur un film, tu DOIS répondre UNIQUEMENT avec le JSON de l'outil.
+2. PAS de phrase d'intro. PAS d'explication. PAS de Markdown (```). JUSTE LE JSON BRUT.
+3. Si la discussion est générale (pas de demande de film), réponds normalement en texte.
+
+EXEMPLES À SUIVRE À LA LETTRE :
+
+User: Parle-moi de Inception.
+Assistant: {"action": "get_movie_data", "parameters": {"title": "Inception"}}
+
+User : Tu connais Avatar ?
+Assistant: {"action": "get_movie_data", "parameters": {"title": "Avatar"}}
+
+C'est quoi The Godfather ?
+Assistant: {"action": "get_movie_data", "parameters": {"title": "The Godfather"}}
+
+User: Bonjour, ça va ?
+Assistant: Bonjour ! Je suis prêt à parler cinéma.
+"""
 
 class LLMService:
-    def __init__(self, model: str = "Hephaestus-v1"):
-        self.model = model
-        self.client = AsyncClient(host='http://localhost:11434')
+    def __init__(self):
+        # Assure-toi que le nom du modèle correspond à celui que tu as créé (Hephaestus-v1)
+        self.model = "Hephaestus-v1"
 
-    async def generate_response(self, prompt: str) -> str:
+    async def generate_response(self, user_prompt: str) -> str:
+        """
+        Envoie le prompt utilisateur à Ollama en injectant le System Prompt.
+        """
         try:
-            # print(f"[*] Debug: Envoi à {self.model}")
-            response = await self.client.chat(model=self.model, messages=[
-                {
-                    'role': 'user',
-                    'content': prompt,
-                },
+            # On utilise le format 'chat' pour bien séparer le rôle system et user
+            response = ollama.chat(model=self.model, messages=[
+                {'role': 'system', 'content': SYSTEM_PROMPT},
+                {'role': 'user', 'content': user_prompt},
             ])
             return response['message']['content']
         except Exception as e:
-            print(f"[!] Erreur Ollama: {e}")
-            return f"Erreur critique: Impossible de joindre Ollama ou le modèle '{self.model}' n'existe pas."
+            return f"Erreur critique Ollama: {str(e)}"
 
-# Instance globale
 llm_service = LLMService()
