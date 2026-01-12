@@ -12,6 +12,7 @@ export default function Chat() {
     const [messages, setMessages] = useState([]);
     const [inputValue, setInputValue] = useState("");
     const [loadingMessage, setLoadingMessage] = useState(""); // État pour le message de chargement
+    const [loadingChatId, setLoadingChatId] = useState(null); // ID de la conv qui charge
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState(""); // Recherche
     const [isSearchVisible, setIsSearchVisible] = useState(false); // Afficher/Masquer barre recherche
@@ -141,6 +142,7 @@ export default function Chat() {
         // Séquence de chargement
         const steps = ["Réflexion...", "Recherche sur IMDb...", "Analyse des plateformes...", "Génération de la réponse..."];
         setLoadingMessage(steps[0]);
+        setLoadingChatId(currentChatId); // On memorise quelle conv charge
         let stepIndex = 0;
 
         // On change le message toutes les 2.5 secondes pour montrer que ça travaille
@@ -212,6 +214,7 @@ export default function Chat() {
             // On nettoie tout
             clearInterval(intervalId);
             setLoadingMessage("");
+            setLoadingChatId(null);
         }
     };
 
@@ -345,7 +348,7 @@ export default function Chat() {
                             </div>
                         ))
                     )}
-                    {loadingMessage && (
+                    {loadingMessage && loadingChatId === currentChatId && (
                         <div className="message bot">
                             <div className="message-avatar">🎬</div>
                             <div className="message-content">
