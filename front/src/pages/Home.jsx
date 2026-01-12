@@ -13,9 +13,14 @@ export default function Home() {
                     Découvrez où regarder vos films et séries préférés (Netflix, Prime Video, Disney+...)
                     et obtenez les notes IMDb instantanément !
                 </p>
-                <Link className="btn" to="/chat">
-                    Découvrir des films
-                </Link>
+                <div className="cta-group">
+                    <Link className="btn" to="/films">
+                        Explorer les films
+                    </Link>
+                    <Link className="btn btn-secondary" to="/chat">
+                        Ouvrir le chat
+                    </Link>
+                </div>
             </section>
         </div>
     );
