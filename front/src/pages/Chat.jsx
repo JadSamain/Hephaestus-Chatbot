@@ -73,24 +73,24 @@ export default function Chat() {
     };
 
     const updateConversation = (chatId, newMessages) => {
-        // Copie du tableau pour ne pas modifier l'état directement
-        let newConversations = [...conversations];
+        setConversations(prevConversations => {
+            return prevConversations.map(chat => {
+                if (chat.id === chatId) {
+                    // Création d'une copie de l'objet chat pour éviter la mutation
+                    let updatedChat = { ...chat, messages: newMessages };
 
-        // On cherche la conversation à modifier
-        for (let i = 0; i < newConversations.length; i++) {
-            if (newConversations[i].id === chatId) {
-                newConversations[i].messages = newMessages;
-
-                // Si c'est le premier message on met le titre
-                if (newConversations[i].messages.length > 0 && newConversations[i].title === "Nouvelle conversation") {
-                    let firstMsg = newConversations[i].messages[0];
-                    if (firstMsg.sender === 'user') {
-                        newConversations[i].title = firstMsg.text.substring(0, 20) + "...";
+                    // Mise à jour du titre si nécessaire
+                    if (newMessages.length > 0 && chat.title === "Nouvelle conversation") {
+                        const firstMsg = newMessages[0];
+                        if (firstMsg.sender === 'user') {
+                            updatedChat.title = firstMsg.text.substring(0, 20) + "...";
+                        }
                     }
+                    return updatedChat;
                 }
-            }
-        }
-        setConversations(newConversations);
+                return chat;
+            });
+        });
     };
 
     const deleteConversation = (e, chatId) => {
