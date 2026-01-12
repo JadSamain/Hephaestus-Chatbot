@@ -209,3 +209,20 @@ __marimo__/
 
 
 front/node_modules
+
+
+# Système Mac
+.DS_Store
+
+# Python (Backend)
+__pycache__/
+*.py[cod]
+venv/
+.env
+
+# Node (Frontend)
+node_modules/
+dist/
+.env.local
+.vite/
+EOF
