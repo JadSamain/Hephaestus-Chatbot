@@ -472,6 +472,27 @@ body {
   box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.2);
 }
 
+/* Loading Animation */
+.loading-text {
+  animation: pulseText 1.5s infinite;
+  font-style: italic;
+  opacity: 0.8;
+}
+
+@keyframes pulseText {
+  0% {
+    opacity: 0.5;
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0.5;
+  }
+}
+
 .send-btn {
   padding: 1rem 2rem;
   background-color: #FFD700;

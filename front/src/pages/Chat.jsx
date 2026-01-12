@@ -9,7 +9,7 @@ export default function Chat() {
     const [currentChatId, setCurrentChatId] = useState(null);
     const [messages, setMessages] = useState([]);
     const [inputValue, setInputValue] = useState("");
-    const [isLoading, setIsLoading] = useState(false);
+    const [loadingMessage, setLoadingMessage] = useState(""); // État pour le message de chargement
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const messagesEndRef = useRef(null);
 
@@ -133,7 +133,19 @@ export default function Chat() {
 
         const currentInput = inputValue;
         setInputValue("");
-        setIsLoading(true);
+
+        // Séquence de chargement
+        const steps = ["Réflexion...", "Recherche sur IMDb...", "Analyse des plateformes...", "Génération de la réponse..."];
+        setLoadingMessage(steps[0]);
+        let stepIndex = 0;
+
+        // On change le message toutes les 2.5 secondes pour montrer que ça travaille
+        const intervalId = setInterval(() => {
+            stepIndex++;
+            if (stepIndex < steps.length) {
+                setLoadingMessage(steps[stepIndex]);
+            }
+        }, 2500);
 
         try {
             // On prépare les données pour le back
@@ -149,7 +161,6 @@ export default function Chat() {
 
             if (response.status !== 200) {
                 alert("Erreur serveur !");
-                setIsLoading(false);
                 return;
             }
 
@@ -171,9 +182,11 @@ export default function Chat() {
         } catch (error) {
             console.log(error);
             alert("Impossible de contacter le serveur");
+        } finally {
+            // On nettoie tout
+            clearInterval(intervalId);
+            setLoadingMessage("");
         }
-
-        setIsLoading(false);
     };
 
     return (
@@ -249,11 +262,11 @@ export default function Chat() {
                             </div>
                         ))
                     )}
-                    {isLoading && (
+                    {loadingMessage && (
                         <div className="message bot">
                             <div className="message-avatar">🎬</div>
                             <div className="message-content">
-                                <p>Recherche en cours...</p>
+                                <p className="loading-text">{loadingMessage}</p>
                             </div>
                         </div>
                     )}
@@ -268,18 +281,18 @@ export default function Chat() {
                             placeholder="Ex: Où puis-je regarder Inception ?"
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
-                            disabled={isLoading}
+                            disabled={!!loadingMessage}
                         />
                         <button
                             type="submit"
                             className="send-btn"
-                            disabled={isLoading || !inputValue.trim()}
+                            disabled={!!loadingMessage || !inputValue.trim()}
                         >
                             Envoyer
                         </button>
                     </form>
                 </div>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 }
