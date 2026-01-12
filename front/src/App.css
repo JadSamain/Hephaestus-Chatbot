@@ -94,6 +94,29 @@ body {
   }
 }
 
+.home-logo {
+  width: 180px;
+  height: auto;
+  margin-bottom: 2rem;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(255, 215, 0, 0.2);
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+
+  100% {
+    transform: translateY(0px);
+  }
+}
+
 .hero h1 {
   font-size: clamp(3rem, 8vw, 6rem);
   font-weight: 900;
