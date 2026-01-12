@@ -48,10 +48,15 @@ export default function Chat() {
             messages: [],
             date: new Date().toISOString()
         };
-        setConversations(prev => [newChat, ...prev]);
+        // On rajoute au début
+        let newTableau = [newChat];
+        for (let i = 0; i < conversations.length; i++) {
+            newTableau.push(conversations[i]);
+        }
+        setConversations(newTableau);
         setCurrentChatId(newChat.id);
         setMessages([]);
-        setIsSidebarOpen(false); // Fermer sidebar sur mobile après sélection
+        setIsSidebarOpen(false);
     };
 
     const loadConversation = (chatId) => {
@@ -64,32 +69,47 @@ export default function Chat() {
     };
 
     const updateConversation = (chatId, newMessages) => {
-        setConversations(prev => prev.map(chat => {
-            if (chat.id === chatId) {
-                // Générer un titre si c'est le premier message utilisateur
-                let title = chat.title;
-                if (chat.messages.length === 0 && newMessages.length > 0) {
-                    const firstUserMsg = newMessages.find(m => m.sender === 'user');
-                    if (firstUserMsg) {
-                        title = firstUserMsg.text.slice(0, 30) + (firstUserMsg.text.length > 30 ? "..." : "");
+        // Copie du tableau pour ne pas modifier l'état directement
+        let newConversations = [...conversations];
+
+        // On cherche la conversation à modifier
+        for (let i = 0; i < newConversations.length; i++) {
+            if (newConversations[i].id === chatId) {
+                newConversations[i].messages = newMessages;
+
+                // Si c'est le premier message on met le titre
+                if (newConversations[i].messages.length > 0 && newConversations[i].title === "Nouvelle conversation") {
+                    let firstMsg = newConversations[i].messages[0];
+                    if (firstMsg.sender === 'user') {
+                        newConversations[i].title = firstMsg.text.substring(0, 20) + "...";
                     }
                 }
-                return { ...chat, messages: newMessages, title };
             }
-            return chat;
-        }));
+        }
+        setConversations(newConversations);
     };
 
     const handleSendMessage = async (e) => {
         e.preventDefault();
 
-        if (!inputValue.trim() || isLoading) return;
+        if (inputValue === "") {
+            // Pas de message vide
+            return;
+        }
 
+        // On crée la date à la main
+        let now = new Date();
+        let hours = now.getHours();
+        let minutes = now.getMinutes();
+        if (minutes < 10) minutes = "0" + minutes;
+        let timeString = hours + ":" + minutes;
+
+        // Message de l'utilisateur
         const userMessage = {
             id: Date.now(),
             text: inputValue,
             sender: "user",
-            timestamp: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+            timestamp: timeString
         };
 
         const updatedMessages = [...messages, userMessage];
@@ -101,54 +121,44 @@ export default function Chat() {
         setIsLoading(true);
 
         try {
-            // Appel à l'API backend
-            const requestPayload = { prompt: currentInput };
+            // On prépare les données pour le back
+            const donnee = { prompt: currentInput };
 
-            console.log('📤 Envoi au backend:', requestPayload);
-            console.log('📤 JSON envoyé:', JSON.stringify(requestPayload));
+            console.log("Envoi au serveur...");
 
             const response = await fetch('http://localhost:8000/chat/', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(requestPayload)
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(donnee)
             });
 
-            console.log('📥 Statut de la réponse:', response.status);
-
-            if (!response.ok) {
-                throw new Error(`Erreur HTTP: ${response.status}`);
+            if (response.status !== 200) {
+                alert("Erreur serveur !");
+                setIsLoading(false);
+                return;
             }
 
             const data = await response.json();
 
-            console.log('📥 Réponse du backend:', data);
-            console.log('📥 Texte de la réponse:', data.response);
-
+            // Réponse de l'IA
             const botMessage = {
                 id: Date.now() + 1,
-                text: data.response || "Désolé, je n'ai pas pu générer une réponse.",
+                text: data.response,
                 sender: "bot",
-                timestamp: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+                timestamp: timeString
             };
 
+            // On ajoute la réponse
             const finalMessages = [...updatedMessages, botMessage];
             setMessages(finalMessages);
             updateConversation(currentChatId, finalMessages);
-        } catch (error) {
-            console.error('Erreur lors de l\'appel à l\'API:', error);
 
-            const errorMessage = {
-                id: Date.now() + 1,
-                text: "Désolé, une erreur s'est produite. Assurez-vous que le serveur backend est en cours d'exécution sur http://localhost:8000",
-                sender: "bot",
-                timestamp: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-            };
-            setMessages(prev => [...prev, errorMessage]);
-        } finally {
-            setIsLoading(false);
+        } catch (error) {
+            console.log(error);
+            alert("Impossible de contacter le serveur");
         }
+
+        setIsLoading(false);
     };
 
     return (
