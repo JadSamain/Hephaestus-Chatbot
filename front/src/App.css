@@ -668,3 +668,23 @@ body {
   text-transform: uppercase;
   font-weight: 600;
 }
+
+/* Bouncing Hero Logo */
+.hero-logo-bounce {
+  width: 220px;
+  height: auto;
+  margin-bottom: 1.5rem;
+  animation: bounceLogo 2s infinite ease-in-out;
+}
+
+@keyframes bounceLogo {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-20px);
+  }
+}

@@ -5,8 +5,9 @@ import logo from "../img/logo.png";
 export default function Home() {
     return (
         <div className="page home-page">
-            <img src={logo} alt="Popcorn Logo" className="home-logo" />
+
             <section className="hero">
+                <img src={logo} alt="Popcorn Logo" className="hero-logo-bounce" />
                 <h1>POPCORN</h1>
                 <p>
                     <span style={{ color: '#FFD700', fontWeight: 'bold' }}>Votre assistant cinéma intelligent propulsé par l'IA.</span>
