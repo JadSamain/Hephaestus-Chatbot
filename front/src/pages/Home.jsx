@@ -6,7 +6,7 @@ export default function Home() {
     return (
         <div className="page home-page">
             <img src={logo} alt="POPCORN Logo" className="app-logo" />
-            <section className="hero">
+            <div className="hero">
                 <h1>POPCORN</h1>
                 <p>
                     Votre assistant cinéma intelligent propulsé par l'IA.
@@ -16,7 +16,7 @@ export default function Home() {
                 <Link className="btn" to="/chat">
                     Découvrir des films
                 </Link>
-            </section>
+            </div>
         </div>
     );
 }

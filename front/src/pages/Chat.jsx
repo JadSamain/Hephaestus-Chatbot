@@ -3,169 +3,190 @@ import { Link } from "react-router-dom";
 import "../App.css";
 
 export default function Chat() {
-    const [conversations, setConversations] = useState([]);
-    const [currentChatId, setCurrentChatId] = useState(null);
-    const [messages, setMessages] = useState([]);
-    const [inputValue, setInputValue] = useState("");
-    const [isLoading, setIsLoading] = useState(false);
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const messagesEndRef = useRef(null);
+    // Variables d'état
+    const [history, setHistory] = useState([]);
+    const [currentId, setCurrentId] = useState(null);
+    const [msgs, setMsgs] = useState([]);
+    const [input, setInput] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [menuOpen, setMenuOpen] = useState(false);
+    const bottomRef = useRef(null);
 
-    // Charger l'historique au démarrage
+    // Au chargement de la page
     useEffect(() => {
-        const savedConversations = JSON.parse(localStorage.getItem("popcorn_history") || "[]");
-        setConversations(savedConversations);
-
-        if (savedConversations.length > 0) {
-            // Charger la dernière conversation ou créer une nouvelle
-            loadConversation(savedConversations[0].id);
+        let saved = localStorage.getItem("popcorn_history");
+        if (saved) {
+            saved = JSON.parse(saved);
         } else {
-            createNewChat();
+            saved = [];
+        }
+        setHistory(saved);
+
+        if (saved.length > 0) {
+            // Charger le premier chat
+            let first = saved[0];
+            setCurrentId(first.id);
+            setMsgs(first.messages);
+            setMenuOpen(false);
+        } else {
+            // Créer un nouveau chat
+            let newChat = {
+                id: Date.now(),
+                title: "Nouvelle conversation",
+                messages: [],
+                date: new Date().toISOString()
+            };
+            setHistory([newChat]);
+            setCurrentId(newChat.id);
+            setMsgs([]);
+            setMenuOpen(false);
         }
     }, []);
 
-    // Sauvegarder les conversations à chaque changement
+    // Sauvegarde auto
     useEffect(() => {
-        if (conversations.length > 0) {
-            localStorage.setItem("popcorn_history", JSON.stringify(conversations));
+        if (history.length > 0) {
+            localStorage.setItem("popcorn_history", JSON.stringify(history));
         }
-    }, [conversations]);
+    }, [history]);
 
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    };
-
+    // Scroll en bas automatique
     useEffect(() => {
-        scrollToBottom();
-    }, [messages]);
+        if (bottomRef.current) {
+            bottomRef.current.scrollIntoView({ behavior: "smooth" });
+        }
+    }, [msgs]);
 
-    const createNewChat = () => {
-        const newChat = {
+    // Nouvelle conversation
+    const newChat = () => {
+        let chat = {
             id: Date.now(),
             title: "Nouvelle conversation",
             messages: [],
             date: new Date().toISOString()
         };
-        setConversations(prev => [newChat, ...prev]);
-        setCurrentChatId(newChat.id);
-        setMessages([]);
-        setIsSidebarOpen(false); // Fermer sidebar sur mobile après sélection
-    };
+        let newHistory = [chat, ...history];
+        setHistory(newHistory);
+        setCurrentId(chat.id);
+        setMsgs([]);
+        setMenuOpen(false);
+    }
 
-    const loadConversation = (chatId) => {
-        const chat = conversations.find(c => c.id === chatId);
+    // Changer de conversation
+    const switchChat = (id) => {
+        let chat = history.find(c => c.id === id);
         if (chat) {
-            setCurrentChatId(chatId);
-            setMessages(chat.messages);
-            setIsSidebarOpen(false);
+            setCurrentId(id);
+            setMsgs(chat.messages);
+            setMenuOpen(false);
         }
-    };
+    }
 
-    const updateConversation = (chatId, newMessages) => {
-        setConversations(prev => prev.map(chat => {
-            if (chat.id === chatId) {
-                // Générer un titre si c'est le premier message utilisateur
-                let title = chat.title;
-                if (chat.messages.length === 0 && newMessages.length > 0) {
-                    const firstUserMsg = newMessages.find(m => m.sender === 'user');
-                    if (firstUserMsg) {
-                        title = firstUserMsg.text.slice(0, 30) + (firstUserMsg.text.length > 30 ? "..." : "");
-                    }
-                }
-                return { ...chat, messages: newMessages, title };
-            }
-            return chat;
-        }));
-    };
-
-    const handleSendMessage = async (e) => {
+    // Envoyer un message
+    const send = async (e) => {
         e.preventDefault();
 
-        if (!inputValue.trim() || isLoading) return;
+        if (input === "" || loading) return;
 
-        const userMessage = {
+        // Message utilisateur
+        let userMsg = {
             id: Date.now(),
-            text: inputValue,
+            text: input,
             sender: "user",
             timestamp: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
         };
 
-        const updatedMessages = [...messages, userMessage];
-        setMessages(updatedMessages);
-        updateConversation(currentChatId, updatedMessages);
+        let newMsgs = [...msgs, userMsg];
+        setMsgs(newMsgs);
 
-        const currentInput = inputValue;
-        setInputValue("");
-        setIsLoading(true);
+        // Mettre à jour l'historique direct
+        let newHistory = history.map(chat => {
+            if (chat.id === currentId) {
+                let title = chat.title;
+                // Si c'est le tout premier message, on change le titre
+                if (chat.messages.length === 0) {
+                    title = input.substring(0, 30);
+                    if (input.length > 30) title += "...";
+                }
+                return { ...chat, messages: newMsgs, title: title };
+            }
+            return chat;
+        });
+        setHistory(newHistory);
 
+        let prompt = input;
+        setInput("");
+        setLoading(true);
+
+        // Appel API
         try {
-            // Appel à l'API backend
-            const requestPayload = { prompt: currentInput };
-
-            console.log('📤 Envoi au backend:', requestPayload);
-            console.log('📤 JSON envoyé:', JSON.stringify(requestPayload));
-
-            const response = await fetch('http://localhost:8000/chat/', {
+            const res = await fetch('http://localhost:8000/chat/', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(requestPayload)
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: prompt })
             });
 
-            console.log('📥 Statut de la réponse:', response.status);
+            if (!res.ok) throw new Error("Erreur serveur");
 
-            if (!response.ok) {
-                throw new Error(`Erreur HTTP: ${response.status}`);
-            }
+            const data = await res.json();
 
-            const data = await response.json();
-
-            console.log('📥 Réponse du backend:', data);
-            console.log('📥 Texte de la réponse:', data.response);
-
-            const botMessage = {
+            // Message Bot
+            let botMsg = {
                 id: Date.now() + 1,
-                text: data.response || "Désolé, je n'ai pas pu générer une réponse.",
+                text: data.response || "Pas de réponse.",
                 sender: "bot",
                 timestamp: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
             };
 
-            const finalMessages = [...updatedMessages, botMessage];
-            setMessages(finalMessages);
-            updateConversation(currentChatId, finalMessages);
-        } catch (error) {
-            console.error('Erreur lors de l\'appel à l\'API:', error);
+            let finalMsgs = [...newMsgs, botMsg];
+            setMsgs(finalMsgs);
 
-            const errorMessage = {
+            // Mettre à jour l'historique encore
+            newHistory = history.map(chat => {
+                if (chat.id === currentId) {
+                    // On garde le titre qu'on a peut-être changé juste avant
+                    let currentTitle = chat.title;
+                    if (chat.messages.length === 0) {
+                        currentTitle = prompt.substring(0, 30);
+                        if (prompt.length > 30) currentTitle += "...";
+                    }
+                    return { ...chat, messages: finalMsgs, title: currentTitle };
+                }
+                return chat;
+            });
+            setHistory(newHistory);
+
+        } catch (err) {
+            console.log(err);
+            let errorMsg = {
                 id: Date.now() + 1,
-                text: "Désolé, une erreur s'est produite. Assurez-vous que le serveur backend est en cours d'exécution sur http://localhost:8000",
+                text: "Erreur connexion serveur (http://localhost:8000)",
                 sender: "bot",
                 timestamp: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
             };
-            setMessages(prev => [...prev, errorMessage]);
-        } finally {
-            setIsLoading(false);
+            setMsgs([...newMsgs, errorMsg]);
         }
+
+        setLoading(false);
     };
 
     return (
         <div className="app-container">
             {/* Sidebar */}
-            <div className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
-                <button onClick={createNewChat} className="new-chat-btn">
+            <div className={`sidebar ${menuOpen ? 'open' : ''}`}>
+                <button onClick={newChat} className="new-chat-btn">
                     <span>+</span> Nouvelle conversation
                 </button>
 
                 <div className="history-list">
-                    {conversations.map(chat => (
+                    {history.map(c => (
                         <div
-                            key={chat.id}
-                            className={`history-item ${chat.id === currentChatId ? 'active' : ''}`}
-                            onClick={() => loadConversation(chat.id)}
+                            key={c.id}
+                            className={`history-item ${c.id === currentId ? 'active' : ''}`}
+                            onClick={() => switchChat(c.id)}
                         >
                             <span className="history-item-icon">💬</span>
-                            {chat.title}
+                            {c.title}
                         </div>
                     ))}
                 </div>
@@ -175,11 +196,11 @@ export default function Chat() {
                 </Link>
             </div>
 
-            {/* Main Chat Area */}
+            {/* Zone de Chat */}
             <div className="chat-container">
                 <button
                     className="mobile-menu-btn"
-                    onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                    onClick={() => setMenuOpen(!menuOpen)}
                 >
                     ☰
                 </button>
@@ -192,28 +213,28 @@ export default function Chat() {
                 </div>
 
                 <div className="chat-messages">
-                    {messages.length === 0 ? (
+                    {msgs.length === 0 ? (
                         <div className="empty-state">
                             <div className="empty-state-icon">🎬</div>
                             <h3>Bienvenue sur POPCORN</h3>
                             <p>Je suis prêt à parler cinéma !</p>
                         </div>
                     ) : (
-                        messages.map((message) => (
-                            <div key={message.id} className={`message ${message.sender}`}>
+                        msgs.map((m) => (
+                            <div key={m.id} className={`message ${m.sender}`}>
                                 <div className="message-avatar">
-                                    {message.sender === "user" ? "👤" : "🎬"}
+                                    {m.sender === "user" ? "👤" : "🎬"}
                                 </div>
                                 <div className="message-content">
-                                    <p>{message.text}</p>
+                                    <p>{m.text}</p>
                                     <small style={{ opacity: 0.7, fontSize: '0.85rem' }}>
-                                        {message.timestamp}
+                                        {m.timestamp}
                                     </small>
                                 </div>
                             </div>
                         ))
                     )}
-                    {isLoading && (
+                    {loading && (
                         <div className="message bot">
                             <div className="message-avatar">🎬</div>
                             <div className="message-content">
@@ -221,23 +242,23 @@ export default function Chat() {
                             </div>
                         </div>
                     )}
-                    <div ref={messagesEndRef} />
+                    <div ref={bottomRef} />
                 </div>
 
                 <div className="chat-input-container">
-                    <form onSubmit={handleSendMessage} className="chat-input-wrapper">
+                    <form onSubmit={send} className="chat-input-wrapper">
                         <input
                             type="text"
                             className="chat-input"
                             placeholder="Ex: Où puis-je regarder Inception ?"
-                            value={inputValue}
-                            onChange={(e) => setInputValue(e.target.value)}
-                            disabled={isLoading}
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            disabled={loading}
                         />
                         <button
                             type="submit"
                             className="send-btn"
-                            disabled={isLoading || !inputValue.trim()}
+                            disabled={loading || !input.trim()}
                         >
                             Envoyer
                         </button>
