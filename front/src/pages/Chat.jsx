@@ -13,6 +13,8 @@ export default function Chat() {
     const [inputValue, setInputValue] = useState("");
     const [loadingMessage, setLoadingMessage] = useState(""); // État pour le message de chargement
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState(""); // Recherche
+    const [isSearchVisible, setIsSearchVisible] = useState(false); // Afficher/Masquer barre recherche
     const messagesEndRef = useRef(null);
 
     // Charger l'historique au démarrage
@@ -224,23 +226,51 @@ export default function Chat() {
                     <span>+</span> Nouvelle conversation
                 </button>
 
+                <button onClick={() => setIsSearchVisible(!isSearchVisible)} className="search-toggle-btn">
+                    <span>🔍</span> Rechercher
+                </button>
+
+                {isSearchVisible && (
+                    <input
+                        type="text"
+                        className="sidebar-search-input"
+                        placeholder="Mots-clés..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                )}
+
                 <div className="history-list">
-                    {conversations.map(chat => (
-                        <div
-                            key={chat.id}
-                            className={`history-item ${chat.id === currentChatId ? 'active' : ''}`}
-                            onClick={() => loadConversation(chat.id)}
-                        >
-                            <span className="history-item-icon">💬</span>
-                            <span className="history-item-title">{chat.title}</span>
-                            <button
-                                className="delete-conv-btn"
-                                onClick={(e) => deleteConversation(e, chat.id)}
+                    {(() => {
+                        let filteredConversations = [];
+                        if (searchTerm === "") {
+                            filteredConversations = conversations;
+                        } else {
+                            // Style étudiant : boucle for simple
+                            for (let i = 0; i < conversations.length; i++) {
+                                if (conversations[i].title.toLowerCase().includes(searchTerm.toLowerCase())) {
+                                    filteredConversations.push(conversations[i]);
+                                }
+                            }
+                        }
+
+                        return filteredConversations.map(chat => (
+                            <div
+                                key={chat.id}
+                                className={`history-item ${chat.id === currentChatId ? 'active' : ''}`}
+                                onClick={() => loadConversation(chat.id)}
                             >
-                                🗑️
-                            </button>
-                        </div>
-                    ))}
+                                <span className="history-item-icon">💬</span>
+                                <span className="history-item-title">{chat.title}</span>
+                                <button
+                                    className="delete-conv-btn"
+                                    onClick={(e) => deleteConversation(e, chat.id)}
+                                >
+                                    🗑️
+                                </button>
+                            </div>
+                        ));
+                    })()}
                 </div>
 
                 <Link to="/" className="back-btn" style={{ marginTop: 'auto' }}>
