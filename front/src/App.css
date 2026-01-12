@@ -95,26 +95,19 @@ body {
 }
 
 .home-logo {
-  width: 180px;
+  position: absolute;
+  top: 2rem;
+  left: 2rem;
+  width: 150px;
   height: auto;
-  margin-bottom: 2rem;
-  border-radius: 20px;
-  box-shadow: 0 10px 30px rgba(255, 215, 0, 0.2);
-  animation: float 6s ease-in-out infinite;
+  z-index: 10;
+  border-radius: 12px;
+  filter: drop-shadow(0 4px 10px rgba(255, 215, 0, 0.2));
+  transition: transform 0.3s ease;
 }
 
-@keyframes float {
-  0% {
-    transform: translateY(0px);
-  }
-
-  50% {
-    transform: translateY(-10px);
-  }
-
-  100% {
-    transform: translateY(0px);
-  }
+.home-logo:hover {
+  transform: scale(1.05);
 }
 
 .hero h1 {
