@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import "../App.css";
 
+import logo from "../img/logo.png";
+
 export default function Chat() {
     const [conversations, setConversations] = useState([]);
     const [currentChatId, setCurrentChatId] = useState(null);
@@ -153,6 +155,9 @@ export default function Chat() {
         <div className="app-container">
             {/* Sidebar */}
             <div className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
+                <div className="sidebar-header">
+                    <img src={logo} alt="Popcorn Chat Logo" className="sidebar-logo" />
+                </div>
                 <button onClick={createNewChat} className="new-chat-btn">
                     <span>+</span> Nouvelle conversation
                 </button>
