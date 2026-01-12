@@ -101,193 +101,185 @@ export default function Chat() {
             }
             setConversations(newConversations);
 
-            // Si on supprime la conversation active, on en crée une nouvelle ou on change
-            //         if (chatId === currentChatId) {
-            //             if (newConversations.length > 0) {
-            //                 loadConversation(newConversations[0].id);
-            //             } else {
-            //                 createNewChat();
-            //             }
-            //         }
-            //     }
-            // };
+        }
+    };
 
-            const handleSendMessage = async (e) => {
-                e.preventDefault();
+    const handleSendMessage = async (e) => {
+        e.preventDefault();
 
-                if (inputValue === "") {
-                    // Pas de message vide
-                    return;
-                }
+        if (inputValue === "") {
+            // Pas de message vide
+            return;
+        }
 
-                // On crée la date à la main
-                let now = new Date();
-                let hours = now.getHours();
-                let minutes = now.getMinutes();
-                if (minutes < 10) minutes = "0" + minutes;
-                let timeString = hours + ":" + minutes;
+        // On crée la date à la main
+        let now = new Date();
+        let hours = now.getHours();
+        let minutes = now.getMinutes();
+        if (minutes < 10) minutes = "0" + minutes;
+        let timeString = hours + ":" + minutes;
 
-                // Message de l'utilisateur
-                const userMessage = {
-                    id: Date.now(),
-                    text: inputValue,
-                    sender: "user",
-                    timestamp: timeString
-                };
+        // Message de l'utilisateur
+        const userMessage = {
+            id: Date.now(),
+            text: inputValue,
+            sender: "user",
+            timestamp: timeString
+        };
 
-                const updatedMessages = [...messages, userMessage];
-                setMessages(updatedMessages);
-                updateConversation(currentChatId, updatedMessages);
+        const updatedMessages = [...messages, userMessage];
+        setMessages(updatedMessages);
+        updateConversation(currentChatId, updatedMessages);
 
-                const currentInput = inputValue;
-                setInputValue("");
-                setIsLoading(true);
+        const currentInput = inputValue;
+        setInputValue("");
+        setIsLoading(true);
 
-                try {
-                    // On prépare les données pour le back
-                    const donnee = { prompt: currentInput };
+        try {
+            // On prépare les données pour le back
+            const donnee = { prompt: currentInput };
 
-                    console.log("Envoi au serveur...");
+            console.log("Envoi au serveur...");
 
-                    const response = await fetch('http://localhost:8000/chat/', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(donnee)
-                    });
+            const response = await fetch('http://localhost:8000/chat/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(donnee)
+            });
 
-                    if (response.status !== 200) {
-                        alert("Erreur serveur !");
-                        setIsLoading(false);
-                        return;
-                    }
-
-                    const data = await response.json();
-
-                    // Réponse de l'IA
-                    const botMessage = {
-                        id: Date.now() + 1,
-                        text: data.response,
-                        sender: "bot",
-                        timestamp: timeString
-                    };
-
-                    // On ajoute la réponse
-                    const finalMessages = [...updatedMessages, botMessage];
-                    setMessages(finalMessages);
-                    updateConversation(currentChatId, finalMessages);
-
-                } catch (error) {
-                    console.log(error);
-                    alert("Impossible de contacter le serveur");
-                }
-
+            if (response.status !== 200) {
+                alert("Erreur serveur !");
                 setIsLoading(false);
+                return;
+            }
+
+            const data = await response.json();
+
+            // Réponse de l'IA
+            const botMessage = {
+                id: Date.now() + 1,
+                text: data.response,
+                sender: "bot",
+                timestamp: timeString
             };
 
-            return (
-                <div className="app-container">
-                    {/* Sidebar */}
-                    <div className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
-                        <div className="sidebar-header">
-                            <img src={logo} alt="Popcorn Chat Logo" className="sidebar-logo" />
-                        </div>
-                        <button onClick={createNewChat} className="new-chat-btn">
-                            <span>+</span> Nouvelle conversation
-                        </button>
+            // On ajoute la réponse
+            const finalMessages = [...updatedMessages, botMessage];
+            setMessages(finalMessages);
+            updateConversation(currentChatId, finalMessages);
 
-                        <div className="history-list">
-                            {conversations.map(chat => (
-                                <div
-                                    key={chat.id}
-                                    className={`history-item ${chat.id === currentChatId ? 'active' : ''}`}
-                                    onClick={() => loadConversation(chat.id)}
-                                >
-                                    <span className="history-item-icon">💬</span>
-                                    <span className="history-item-title">{chat.title}</span>
-                                    <button
-                                        className="delete-conv-btn"
-                                        onClick={(e) => deleteConversation(e, chat.id)}
-                                    >
-                                        🗑️
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-
-                        <Link to="/" className="back-btn" style={{ marginTop: 'auto' }}>
-                            ← Menu Principal
-                        </Link>
-                    </div>
-
-                    {/* Main Chat Area */}
-                    <div className="chat-container">
-                        <button
-                            className="mobile-menu-btn"
-                            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                        >
-                            ☰
-                        </button>
-
-                        <div className="chat-header">
-                            <h2>
-                                <span className="status-indicator"></span>
-                                POPCORN Chat
-                            </h2>
-                        </div>
-
-                        <div className="chat-messages">
-                            {messages.length === 0 ? (
-                                <div className="empty-state">
-                                    <div className="empty-state-icon">🎬</div>
-                                    <h3>Bienvenue sur POPCORN</h3>
-                                    <p>Je suis prêt à parler cinéma !</p>
-                                </div>
-                            ) : (
-                                messages.map((message) => (
-                                    <div key={message.id} className={`message ${message.sender}`}>
-                                        <div className="message-avatar">
-                                            {message.sender === "user" ? "👤" : "🎬"}
-                                        </div>
-                                        <div className="message-content">
-                                            <p>{message.text}</p>
-                                            <small style={{ opacity: 0.7, fontSize: '0.85rem' }}>
-                                                {message.timestamp}
-                                            </small>
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                            {isLoading && (
-                                <div className="message bot">
-                                    <div className="message-avatar">🎬</div>
-                                    <div className="message-content">
-                                        <p>Recherche en cours...</p>
-                                    </div>
-                                </div>
-                            )}
-                            <div ref={messagesEndRef} />
-                        </div>
-
-                        <div className="chat-input-container">
-                            <form onSubmit={handleSendMessage} className="chat-input-wrapper">
-                                <input
-                                    type="text"
-                                    className="chat-input"
-                                    placeholder="Ex: Où puis-je regarder Inception ?"
-                                    value={inputValue}
-                                    onChange={(e) => setInputValue(e.target.value)}
-                                    disabled={isLoading}
-                                />
-                                <button
-                                    type="submit"
-                                    className="send-btn"
-                                    disabled={isLoading || !inputValue.trim()}
-                                >
-                                    Envoyer
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            );
+        } catch (error) {
+            console.log(error);
+            alert("Impossible de contacter le serveur");
         }
+
+        setIsLoading(false);
+    };
+
+    return (
+        <div className="app-container">
+            {/* Sidebar */}
+            <div className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
+                <div className="sidebar-header">
+                    <img src={logo} alt="Popcorn Chat Logo" className="sidebar-logo" />
+                </div>
+                <button onClick={createNewChat} className="new-chat-btn">
+                    <span>+</span> Nouvelle conversation
+                </button>
+
+                <div className="history-list">
+                    {conversations.map(chat => (
+                        <div
+                            key={chat.id}
+                            className={`history-item ${chat.id === currentChatId ? 'active' : ''}`}
+                            onClick={() => loadConversation(chat.id)}
+                        >
+                            <span className="history-item-icon">💬</span>
+                            <span className="history-item-title">{chat.title}</span>
+                            <button
+                                className="delete-conv-btn"
+                                onClick={(e) => deleteConversation(e, chat.id)}
+                            >
+                                🗑️
+                            </button>
+                        </div>
+                    ))}
+                </div>
+
+                <Link to="/" className="back-btn" style={{ marginTop: 'auto' }}>
+                    ← Menu Principal
+                </Link>
+            </div>
+
+            {/* Main Chat Area */}
+            <div className="chat-container">
+                <button
+                    className="mobile-menu-btn"
+                    onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                >
+                    ☰
+                </button>
+
+                <div className="chat-header">
+                    <h2>
+                        <span className="status-indicator"></span>
+                        POPCORN Chat
+                    </h2>
+                </div>
+
+                <div className="chat-messages">
+                    {messages.length === 0 ? (
+                        <div className="empty-state">
+                            <div className="empty-state-icon">🎬</div>
+                            <h3>Bienvenue sur POPCORN</h3>
+                            <p>Je suis prêt à parler cinéma !</p>
+                        </div>
+                    ) : (
+                        messages.map((message) => (
+                            <div key={message.id} className={`message ${message.sender}`}>
+                                <div className="message-avatar">
+                                    {message.sender === "user" ? "👤" : "🎬"}
+                                </div>
+                                <div className="message-content">
+                                    <p>{message.text}</p>
+                                    <small style={{ opacity: 0.7, fontSize: '0.85rem' }}>
+                                        {message.timestamp}
+                                    </small>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                    {isLoading && (
+                        <div className="message bot">
+                            <div className="message-avatar">🎬</div>
+                            <div className="message-content">
+                                <p>Recherche en cours...</p>
+                            </div>
+                        </div>
+                    )}
+                    <div ref={messagesEndRef} />
+                </div>
+
+                <div className="chat-input-container">
+                    <form onSubmit={handleSendMessage} className="chat-input-wrapper">
+                        <input
+                            type="text"
+                            className="chat-input"
+                            placeholder="Ex: Où puis-je regarder Inception ?"
+                            value={inputValue}
+                            onChange={(e) => setInputValue(e.target.value)}
+                            disabled={isLoading}
+                        />
+                        <button
+                            type="submit"
+                            className="send-btn"
+                            disabled={isLoading || !inputValue.trim()}
+                        >
+                            Envoyer
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    );
+}
