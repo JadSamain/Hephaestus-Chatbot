@@ -246,10 +246,29 @@ export default function Chat() {
                         if (searchTerm === "") {
                             filteredConversations = conversations;
                         } else {
-                            // Style étudiant : boucle for simple
+                            // Style étudiant : boucle for simple et recherche profonde
                             for (let i = 0; i < conversations.length; i++) {
-                                if (conversations[i].title.toLowerCase().includes(searchTerm.toLowerCase())) {
-                                    filteredConversations.push(conversations[i]);
+                                let found = false;
+                                const chat = conversations[i];
+                                const searchLower = searchTerm.toLowerCase();
+
+                                // 1. Vérifier le titre
+                                if (chat.title.toLowerCase().includes(searchLower)) {
+                                    found = true;
+                                }
+
+                                // 2. Vérifier les messages si pas trouvé dans le titre
+                                if (!found && chat.messages) {
+                                    for (let j = 0; j < chat.messages.length; j++) {
+                                        if (chat.messages[j].text && chat.messages[j].text.toLowerCase().includes(searchLower)) {
+                                            found = true;
+                                            break;
+                                        }
+                                    }
+                                }
+
+                                if (found) {
+                                    filteredConversations.push(chat);
                                 }
                             }
                         }
