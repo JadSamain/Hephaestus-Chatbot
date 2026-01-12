@@ -135,26 +135,35 @@ body {
 /* Button Styles */
 .btn {
   display: inline-block;
-  padding: 1rem 2.5rem;
-  font-size: 1.1rem;
+  padding: 1.25rem 3rem;
+  /* px-12 py-5 */
+  font-size: 1.25rem;
+  /* text-xl */
   font-weight: 600;
+  /* font-semibold */
   text-decoration: none;
-  color: #0a0a0a;
-  background-color: #FFD700;
-  border-radius: 50px;
-  box-shadow: 0 10px 30px rgba(255, 215, 0, 0.4);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
+  color: #F5C400;
+  /* text-[#F5C400] */
+  background-color: transparent;
+  border: 2px solid #F5C400;
+  /* border-2 border-[#F5C400] */
+  border-radius: 9999px;
+  /* rounded-full */
+  transition: all 0.3s;
+  /* transition-all duration-300 */
+  cursor: pointer;
 }
 
 .btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 15px 40px rgba(255, 215, 0, 0.6);
+  background-color: rgba(245, 196, 0, 0.1);
+  /* hover:bg-[#F5C400]/10 */
+  transform: scale(1.05);
+  /* hover:scale-105 */
 }
 
 .btn:active {
-  transform: translateY(0);
+  transform: scale(0.95);
+  /* active:scale-95 */
 }
 
 /* Sidebar Layout */
