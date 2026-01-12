@@ -4,7 +4,6 @@ import logo from "../img/logo.png";
 
 export default function Home() {
     return (
-    return (
         <div className="page home-page">
             <img src={logo} alt="Popcorn Logo" className="home-logo" />
             <section className="hero">
