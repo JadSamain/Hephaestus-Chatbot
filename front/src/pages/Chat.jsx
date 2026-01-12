@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
+import MovieCard from "../components/MovieCard.jsx";
 import "../App.css";
 
 import logo from "../img/logo.png";
+
 
 export default function Chat() {
     const [conversations, setConversations] = useState([]);
@@ -166,12 +168,34 @@ export default function Chat() {
 
             const data = await response.json();
 
+            // On essaie de voir si c'est du JSON (film) ou du texte normal
+            let botText = data.response;
+            let msgType = 'text';
+            let movieData = null;
+
+            try {
+                // On tente de parser la réponse si c'est un JSON valide
+                if (data.response.trim().startsWith('{')) {
+                    const parsed = JSON.parse(data.response);
+                    if (parsed.type === 'movie_recommendation') {
+                        msgType = 'movie';
+                        movieData = parsed;
+                        botText = "Voici une recommandation pour vous :"; // Texte de fallback ou titre
+                    }
+                }
+            } catch (e) {
+                // Si ça échoue, c'est juste du texte normal
+                console.log("Ce n'est pas un JSON");
+            }
+
             // Réponse de l'IA
             const botMessage = {
                 id: Date.now() + 1,
-                text: data.response,
+                text: botText,
                 sender: "bot",
-                timestamp: timeString
+                timestamp: timeString,
+                type: msgType,
+                content: movieData
             };
 
             // On ajoute la réponse
@@ -254,7 +278,17 @@ export default function Chat() {
                                     {message.sender === "user" ? "👤" : "🎬"}
                                 </div>
                                 <div className="message-content">
-                                    <p>{message.text}</p>
+                                    {message.type === 'movie' && message.content ? (
+                                        <MovieCard
+                                            title={message.content.title}
+                                            year={message.content.year}
+                                            poster={message.content.poster}
+                                            rating={message.content.rating}
+                                            platforms={message.content.platforms}
+                                        />
+                                    ) : (
+                                        <p>{message.text}</p>
+                                    )}
                                     <small style={{ opacity: 0.7, fontSize: '0.85rem' }}>
                                         {message.timestamp}
                                     </small>

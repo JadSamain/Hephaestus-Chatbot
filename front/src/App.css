@@ -583,3 +583,86 @@ body {
     flex-direction: column;
   }
 }
+
+/* Movie Card Styles */
+.movie-card {
+  display: flex;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+  max-width: 400px;
+  margin-top: 0.5rem;
+  transition: transform 0.2s;
+}
+
+.movie-card:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: #FFD700;
+}
+
+.movie-poster {
+  width: 100px;
+  flex-shrink: 0;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.movie-poster img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.no-poster {
+  font-size: 2rem;
+  color: #555;
+}
+
+.movie-info {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.movie-info h4 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #FFD700;
+}
+
+.movie-year {
+  color: #aaa;
+  font-size: 0.9rem;
+  font-weight: normal;
+}
+
+.movie-rating {
+  font-weight: bold;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.movie-platforms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.platform-badge {
+  background: rgba(255, 215, 0, 0.15);
+  color: #FFD700;
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  font-weight: 600;
+}
