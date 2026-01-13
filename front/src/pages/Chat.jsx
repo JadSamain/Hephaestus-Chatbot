@@ -193,6 +193,24 @@ export default function Chat() {
 
             const data = await response.json();
 
+
+            // Gestion de l'erreur de scraping
+            if (data.error === "scraping_failed") {
+                const botMessage = {
+                    id: Date.now() + 1,
+                    text: "Je n'ai pas réussi à récupérer les détails techniques, mais voici ce que je sais...\n\n" + (data.response || ""),
+                    sender: "bot",
+                    timestamp: timeString,
+                    type: "text",
+                    content: null
+                };
+
+                const finalMessages = [...updatedMessages, botMessage];
+                setMessages(finalMessages);
+                updateConversation(currentChatId, finalMessages);
+                return; // On arrête là pour ce cas
+            }
+
             // On essaie de voir si c'est du JSON (film) ou du texte normal
             let botText = data.response;
             let msgType = 'text';
