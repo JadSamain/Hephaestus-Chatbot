@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import "../Films.css";
+import "../film.css";
 
 const platformsList = [
     "Netflix", "Prime Video", "Disney+", "Max", "Hulu",

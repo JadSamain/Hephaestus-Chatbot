@@ -1,0 +1,249 @@
+/* Films Page Styles */
+/* Films Page Styles */
+.page.films-page {
+    display: block;
+    width: 100%;
+    height: 100vh;
+    /* Fixed height for scroll container */
+    min-height: 100vh;
+    background-color: #141414;
+    /* Darker background from mockup */
+    color: #fff;
+    padding: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    /* Enable vertical scrolling */
+}
+
+/* Header & Filter Styles - Scoped */
+.films-page .films-header {
+    padding: 2rem 3rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: transparent;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.films-page .films-header h2 {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    /* Sans-serif to match mockup */
+    font-size: 2rem;
+    color: #FFD700;
+    /* Yellow title */
+    font-weight: 700;
+    margin: 0;
+}
+
+.films-page .header-left {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.films-page .back-btn {
+    color: #aaa;
+    text-decoration: none;
+    font-size: 1rem;
+    transition: color 0.2s;
+}
+
+.films-page .back-btn:hover {
+    color: #fff;
+}
+
+.films-page .header-right {
+    margin-left: auto;
+}
+
+.films-page .platform-filter {
+    padding: 0.75rem 1.25rem;
+    border-radius: 20px;
+    /* More rounded */
+    background-color: #333;
+    color: #fff;
+    border: none;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 0.95rem;
+    cursor: pointer;
+    outline: none;
+    min-width: 200px;
+}
+
+/* Layout - Scoped */
+.films-page .films-container {
+    padding-bottom: 4rem;
+    width: 100%;
+}
+
+.films-page .category-section {
+    margin-bottom: 3rem;
+    padding-left: 3rem;
+}
+
+.films-page .category-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: #fff;
+    font-family: 'Inter', system-ui, sans-serif;
+    /* Sans-serif */
+}
+
+/* Horizontal Scroll - Scoped */
+/* Horizontal Scroll - Scoped */
+.films-page .movie-row {
+    display: flex;
+    gap: 1.5rem;
+    overflow-x: auto;
+    padding-bottom: 1.5rem;
+    padding-right: 3rem;
+    scroll-behavior: smooth;
+    align-items: flex-start;
+}
+
+/* Custom Scrollbar for Movie Row */
+.films-page .movie-row::-webkit-scrollbar {
+    height: 8px;
+    /* Visible height */
+    display: block;
+}
+
+.films-page .movie-row::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+    margin: 0 3rem 0 0;
+    /* Align with padding */
+}
+
+.films-page .movie-row::-webkit-scrollbar-thumb {
+    background: rgba(255, 215, 0, 0.3);
+    /* Subtle yellow */
+    border-radius: 4px;
+}
+
+.films-page .movie-row::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 215, 0, 0.6);
+    /* brighter on hover */
+}
+
+/* Movie Card - Scoped to avoid App.css conflict */
+.films-page .movie-card {
+    background: transparent;
+    border-radius: 12px;
+    /* Smooth corners */
+    border: none;
+    /* override App.css if needed */
+    min-width: 280px;
+    /* Bigger cards as requested */
+    width: 280px;
+    max-width: none;
+    /* Override App.css max-width: 400px */
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    cursor: pointer;
+    margin-top: 0;
+    /* Override App.css */
+}
+
+.films-page .movie-card:hover {
+    transform: scale(1.02);
+    /* Subtle zoom */
+    z-index: 10;
+    background: transparent;
+    /* Override App.css hover bg */
+    border-color: transparent;
+    /* Override App.css */
+}
+
+.films-page .movie-poster-wrapper {
+    position: relative;
+    aspect-ratio: 2/3;
+    overflow: hidden;
+    border-radius: 12px;
+    /* Rounded images */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+.films-page .movie-poster {
+    width: 100%;
+    /* Override App.css 100px */
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+    background: transparent;
+    /* Override App.css */
+}
+
+
+
+.films-page .movie-rating {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.8);
+    color: #FFD700;
+    font-weight: 700;
+    padding: 0.3rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Star icon if not present in HTML, consistent with mockup */
+.films-page .movie-rating::before {
+    content: '★';
+    color: #FFD700;
+}
+
+.films-page .movie-info {
+    padding: 0.8rem 0 0 0;
+}
+
+.films-page .movie-info h4 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 0.3rem 0;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* Empty State - Scoped */
+.films-page .empty-state {
+    text-align: center;
+    padding: 4rem;
+    color: #aaa;
+}
+
+.films-page .empty-state-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .films-page .films-header {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 1.5rem;
+    }
+
+    .films-page .category-section {
+        padding-left: 1.5rem;
+    }
+
+    .films-page .movie-card {
+        min-width: 200px;
+        width: 200px;
+    }
+}
