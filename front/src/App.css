@@ -155,6 +155,7 @@ body {
 
 .btn:hover {
   transform: scale(1.05);
+  color: #F5C400;
   /* hover:scale-105 */
 }
 
