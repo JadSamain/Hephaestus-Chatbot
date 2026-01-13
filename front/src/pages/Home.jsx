@@ -18,13 +18,10 @@ export default function Home() {
                     <Link className="btn" to="/films">
                         Explorer les films
                     </Link>
-                    <Link className="btn btn-secondary" to="/chat">
-                        Ouvrir le chat
+                    <Link className="btn" to="/chat">
+                        Ouvrir le Chat
                     </Link>
                 </div>
-                <Link className="btn" to="/chat">
-                    Ouvrir le Chat
-                </Link>
             </section>
         </div>
     );
