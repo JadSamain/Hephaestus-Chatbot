@@ -23,8 +23,6 @@ export default function Chat() {
     const [chatToDeleteId, setChatToDeleteId] = useState(null);
     const messagesEndRef = useRef(null);
 
-    // State pour la modale À propos
-    const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
 
     // Charger l'historique au démarrage
     useEffect(() => {
