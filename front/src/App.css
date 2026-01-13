@@ -114,7 +114,6 @@ body {
   font-size: 3.5rem;
   font-weight: 900;
   margin-bottom: 1.5rem;
-  font-family: 'Playfair Display', serif;
   color: #FFD700;
   /* background-clip: text; */
   text-shadow: 0 0 60px rgba(255, 215, 0, 0.5);
@@ -155,8 +154,6 @@ body {
 }
 
 .btn:hover {
-  background-color: rgba(245, 196, 0, 0.1);
-  /* hover:bg-[#F5C400]/10 */
   transform: scale(1.05);
   /* hover:scale-105 */
 }
