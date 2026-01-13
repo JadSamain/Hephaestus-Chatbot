@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import MovieCard from "../components/MovieCard.jsx";
 import ConfirmationModal from "../components/ConfirmationModal.jsx";
-import AboutModal from "../components/AboutModal.jsx";
 import "../App.css";
 
 import logo from "../img/logo.png";
@@ -22,9 +21,6 @@ export default function Chat() {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [chatToDeleteId, setChatToDeleteId] = useState(null);
     const messagesEndRef = useRef(null);
-
-    // State pour la modale À propos
-    const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
 
     // Charger l'historique au démarrage
     useEffect(() => {
@@ -356,11 +352,7 @@ export default function Chat() {
                     })()}
                 </div>
 
-                <button className="about-btn" onClick={() => setIsAboutModalOpen(true)} style={{ marginTop: 'auto', background: 'transparent', border: 'none', color: '#aaa', cursor: 'pointer', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%' }}>
-                    <span>ℹ️</span> À propos
-                </button>
-
-                <Link to="/" className="back-btn">
+                <Link to="/" className="back-btn" style={{ marginTop: 'auto' }}>
                     ← Menu Principal
                 </Link>
             </div>
@@ -449,11 +441,6 @@ export default function Chat() {
                 onClose={cancelDeleteConversation}
                 onConfirm={confirmDeleteConversation}
                 message="Êtes-vous sûr de vouloir supprimer cette conversation ? Cette action est irréversible."
-            />
-
-            <AboutModal
-                isOpen={isAboutModalOpen}
-                onClose={() => setIsAboutModalOpen(false)}
             />
         </div >
     );
