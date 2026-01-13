@@ -397,6 +397,7 @@ body {
 .back-btn:hover {
   background: rgba(255, 255, 255, 0.2);
   transform: translateX(-3px);
+  color: #FFD700;
 }
 
 /* Chat Messages */
