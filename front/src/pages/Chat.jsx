@@ -6,7 +6,6 @@ import "../App.css";
 
 import logo from "../img/logo.png";
 
-
 export default function Chat() {
     const [conversations, setConversations] = useState([]);
     const [currentChatId, setCurrentChatId] = useState(null);
@@ -181,8 +180,6 @@ export default function Chat() {
             // On prépare les données pour le back
             const donnee = { prompt: currentInput };
 
-            console.log("Envoi au serveur...");
-
             const response = await fetch('http://localhost:8000/chat/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -213,7 +210,6 @@ export default function Chat() {
                 }
             } catch (e) {
                 // Si ça échoue, c'est juste du texte normal
-                console.log("Ce n'est pas un JSON");
             }
 
             // Réponse de l'IA
@@ -232,7 +228,6 @@ export default function Chat() {
             updateConversation(currentChatId, finalMessages);
 
         } catch (error) {
-            console.log(error);
             alert("Impossible de contacter le serveur");
         } finally {
             // On nettoie tout
