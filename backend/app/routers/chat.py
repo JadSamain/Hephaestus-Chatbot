@@ -1,71 +1,103 @@
 import json
 import re
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from pydantic import BaseModel
-from typing import Optional, Dict, Any
+from typing import Dict, List, Any
 
-# Import du service LLM
 from app.services.llm_service import llm_service
 
 router = APIRouter(prefix="/chat", tags=["AI"])
 
-# --- MODÈLES DE DONNÉES ---
+# --- MÉMOIRE GLOBALE (Contexte) ---
+conversation_history = [] 
+
+# --- MODÈLES ---
 class ChatRequest(BaseModel):
     prompt: str
 
 class ToolCall(BaseModel):
-    """Structure validée par Pydantic pour l'appel d'outil"""
     action: str
     parameters: Dict[str, Any]
 
-# --- OUTIL PLACEHOLDER (Simulation) ---
-async def get_movie_data_placeholder(title: str):
-    """Simule le futur outil de scrapping (Jour 4)"""
-    print(f"    [TOOL] Exécution de get_movie_data pour: {title}")
+# --- OUTIL SIMULÉ ---
+async def get_movie_data_placeholder(title: str) -> Dict:
+    print(f"    [TOOL] Recherche pour: {title}")
+    # Données simulées (Ce sera ton scraper demain)
     return {
         "title": title,
-        "rating": "8.5/10 (IMDb)",
-        "streaming": ["Netflix", "Disney+"],
-        "status": "Success"
+        "year": 2010,
+        "rating": 8.8,
+        "director": "Christopher Nolan",
+        "synopsis": "Un voleur qui vole des secrets d'entreprise à travers l'utilisation de la technologie de partage de rêves...",
+        "platforms": ["Netflix", "HBO"]
     }
 
-# --- LOGIQUE DU ROUTEUR ---
+# --- ROUTEUR PRINCIPAL ---
 @router.post("/")
 async def ask_hephaestus(request: ChatRequest):
+    global conversation_history
     user_prompt = request.prompt
+
+    # 1. Ajout à la mémoire
+    conversation_history.append({"role": "user", "content": user_prompt})
     
-    # 1. Premier passage : Le LLM décide s'il a besoin d'un outil [cite: 33, 119]
-    raw_response = await llm_service.generate_response(user_prompt)
+    # 2. L'IA réfléchit (peut générer du JSON)
+    # On envoie l'historique pour qu'elle comprenne "sa note" = "note de Titanic"
+    raw_response = await llm_service.generate_response(conversation_history)
     
-    # Extraction du JSON (ignore le texte inutile autour)
+    # Par défaut, on suppose que c'est du texte. 
+    # Si c'est du JSON, on va l'écraser par la synthèse plus bas.
+    final_text_response = raw_response 
+    tool_data = None
+
+    # 3. Détection JSON (Invisible pour l'utilisateur)
     json_match = re.search(r'\{.*\}', raw_response, re.DOTALL)
 
     if json_match:
         try:
+            # Nettoyage
             clean_json = json_match.group()
-            print(f"[*] JSON EXTRACTED : {clean_json}") 
-            data = json.loads(clean_json)
+            start = clean_json.find('{')
+            end = clean_json.rfind('}') + 1
+            data = json.loads(clean_json[start:end])
+            
             tool_request = ToolCall(**data)
 
             if tool_request.action == "get_movie_data":
-                movie_title = tool_request.parameters.get("title", "Inconnu")
+                # Récupération du titre (même s'il n'était pas dans le dernier prompt)
+                movie_title = tool_request.parameters.get("title")
                 
-                # 2. Exécution de l'action externe (Tooling) [cite: 111, 264]
-                tool_result = await get_movie_data_placeholder(movie_title)
+                # EXÉCUTION (Backend only)
+                tool_data = await get_movie_data_placeholder(movie_title)
                 
-                # 3. Second passage : Synthèse des données en langage naturel [cite: 119, 214]
-                # On ne renvoie PAS tool_result au front, on le renvoie au LLM
+                # SYNTHÈSE (Transformation JSON -> Phrase)
+                # C'est ici qu'on "cache" le JSON à l'utilisateur
                 synthesis_prompt = (
-                    f"Tu es un expert cinéma. L'utilisateur demande : '{user_prompt}'. "
-                    f"Voici les données réelles trouvées : {tool_result}. "
-                    "Réponds à l'utilisateur de manière naturelle sans mentionner de JSON."
+                    f"Voici la FICHE TECHNIQUE OFFICIELLE (Réalité de terrain) : {tool_data}. "
+                    f"L'utilisateur veut savoir : '{user_prompt}'. "
+                    "CONSIGNES : "
+                    "1. Utilise UNIQUEMENT les infos de la fiche technique ci-dessus."
+                    "2. N'invente rien (pas de suite imaginaire, pas de fausses dates)."
+                    "3. Fais une réponse courte, enthousiaste et donne envie de voir le film."
                 )
                 
-                final_answer = await llm_service.generate_response(synthesis_prompt)
-                return {"response": final_answer}
+                # On force l'IA à changer de personnalité
+                final_text_response = await llm_service.generate_response(
+                    [{"role": "user", "content": synthesis_prompt}], 
+                    system_instruction="Tu es un critique cinéma expert et factuel. Tu ne parles jamais de technique, juste du film."
+                )
 
         except Exception as e:
-            print(f"[!] Erreur de boucle : {e}")
+            print(f"[!] Erreur Tooling: {e}")
 
-    # Réponse par défaut si aucun outil n'est requis ou si le parsing échoue
-    return {"response": raw_response}
+    # 4. Sauvegarde de la réponse PROPRE (pas le JSON) dans l'historique
+    conversation_history.append({"role": "assistant", "content": final_text_response})
+
+    # 5. Envoi au Frontend
+    return {
+        "response": final_text_response,  # <-- C'est LA PHRASE (ex: "Inception est noté 8.8...")
+        "media": {                        # <-- C'est pour afficher la belle image (optionnel)
+            "type": "movie_result",
+            "data": tool_data
+        } if tool_data else None
+    }

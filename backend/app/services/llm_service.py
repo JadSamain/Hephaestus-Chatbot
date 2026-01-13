@@ -1,47 +1,34 @@
 import ollama
+from typing import List, Dict
 
-# --- 1. DÉFINITION DU SYSTEM PROMPT ---
-SYSTEM_PROMPT = """
-Tu es l'intelligence centrale du backend "Popcorn".
-Tu disposes de l'outil : `get_movie_data(title: string)`.
-
-RÈGLES STRICTES :
-1. Si l'utilisateur demande une info sur un film, tu DOIS répondre UNIQUEMENT avec le JSON de l'outil.
-2. PAS de phrase d'intro. PAS d'explication. PAS de Markdown (```). JUSTE LE JSON BRUT.
-3. Si la discussion est générale (pas de demande de film), réponds normalement en texte.
-
-EXEMPLES À SUIVRE À LA LETTRE :
-
-User: Parle-moi de Inception.
-Assistant: {"action": "get_movie_data", "parameters": {"title": "Inception"}}
-
-User : Tu connais Avatar ?
-Assistant: {"action": "get_movie_data", "parameters": {"title": "Avatar"}}
-
-C'est quoi The Godfather ?
-Assistant: {"action": "get_movie_data", "parameters": {"title": "The Godfather"}}
-
-User: Bonjour, ça va ?
-Assistant: Bonjour ! Je suis prêt à parler cinéma.
+# Prompt par défaut (Mode "Robot JSON strict")
+DEFAULT_SYSTEM_PROMPT = """
+Tu es le cerveau backend de 'Popcorn'.
+RÈGLES :
+1. Si l'utilisateur demande une info sur un film, réponds UNIQUEMENT avec ce JSON : {"action": "get_movie_data", "parameters": {"title": "Titre"}}
+2. NE PARLE PAS. RIEN D'AUTRE QUE LE JSON.
+3. Si c'est juste une conversation ("Bonjour", "Merci"), réponds que tu ne sais que parler de cinéma. Réponds gentillement, mais fais comprendre à l'utilisateur que ton but n'est pas de parler d'autre chose que de cinéma.
 """
 
 class LLMService:
     def __init__(self):
-        # Assure-toi que le nom du modèle correspond à celui que tu as créé (Hephaestus-v1)
-        self.model = "Hephaestus-v1"
+        self.model = "Hephaestus-v1" 
 
-    async def generate_response(self, user_prompt: str) -> str:
+    async def generate_response(self, conversation_history: List[Dict[str, str]], system_instruction: str = None) -> str:
         """
-        Envoie le prompt utilisateur à Ollama en injectant le System Prompt.
+        Envoie tout l'historique de conversation à Ollama.
         """
+        # On définit le System Prompt actif
+        active_system = system_instruction if system_instruction else DEFAULT_SYSTEM_PROMPT
+        
+        # On construit la liste complète : [SYSTEM] + [HISTORIQUE]
+        full_messages = [{'role': 'system', 'content': active_system}] + conversation_history
+        
         try:
-            # On utilise le format 'chat' pour bien séparer le rôle system et user
-            response = ollama.chat(model=self.model, messages=[
-                {'role': 'system', 'content': SYSTEM_PROMPT},
-                {'role': 'user', 'content': user_prompt},
-            ])
+            print(f"    [LLM] Envoi de {len(full_messages)} messages au modèle.")
+            response = ollama.chat(model=self.model, messages=full_messages)
             return response['message']['content']
         except Exception as e:
-            return f"Erreur critique Ollama: {str(e)}"
+            return f"Erreur LLM: {str(e)}"
 
 llm_service = LLMService()
