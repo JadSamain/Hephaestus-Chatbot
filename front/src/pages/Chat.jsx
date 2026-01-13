@@ -387,6 +387,9 @@ export default function Chat() {
                         <span className="status-indicator"></span>
                         POPCORN Chat
                     </h2>
+                    <Link to="/about" className="about-link" style={{ marginLeft: 'auto', textDecoration: 'none', backgroundColor: '#FFD700', color: '#0a0a0a', border: 'none', padding: '8px 16px', borderRadius: '20px', fontSize: '0.9rem', fontWeight: '600', transition: 'transform 0.2s', boxShadow: '0 4px 6px rgba(0,0,0,0.3)' }}>
+                        À propos
+                    </Link>
                 </div>
 
                 <div className="chat-messages">
