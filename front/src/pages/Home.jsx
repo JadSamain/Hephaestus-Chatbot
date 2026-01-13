@@ -14,6 +14,14 @@ export default function Home() {
                     <br />
                     Découvrez où regarder vos films et séries préférés et obtenez des recommandations personnalisées.
                 </p>
+                <div className="cta-group">
+                    <Link className="btn" to="/films">
+                        Explorer les films
+                    </Link>
+                    <Link className="btn btn-secondary" to="/chat">
+                        Ouvrir le chat
+                    </Link>
+                </div>
                 <Link className="btn" to="/chat">
                     Ouvrir le Chat
                 </Link>
