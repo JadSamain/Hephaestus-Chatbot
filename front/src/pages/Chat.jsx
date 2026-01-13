@@ -61,7 +61,7 @@ export default function Chat() {
 
         // Sinon, chargement générique => Processus rapide (LLM pur)
         return {
-            steps: ["Réflexion...", "Écriture de la réponse..."],
+            steps: ["Réflexion..."],
             interval: 1000 // 1 seconde, ça doit aller vite
         };
     };
