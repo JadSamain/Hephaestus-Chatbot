@@ -1,0 +1,239 @@
+/* Films Page Styles */
+.page.films-page {
+    display: block;
+    /* Override flex centering */
+    width: 100vw;
+    height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0;
+    align-items: unset;
+    /* Override center alignment */
+    justify-content: unset;
+    /* Override center alignment */
+}
+
+/* Header & Filter Styles */
+.films-header {
+    padding: 2rem 3rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8), transparent);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(10px);
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.films-header h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.5rem;
+    color: #FFD700;
+    font-weight: 700;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.header-right {
+    margin-left: auto;
+}
+
+.platform-filter {
+    padding: 0.75rem 1.25rem;
+    border-radius: 8px;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.95rem;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.2s ease;
+    min-width: 200px;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23FFFFFF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem top 50%;
+    background-size: 0.65rem auto;
+}
+
+.platform-filter:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.platform-filter option {
+    background-color: #1a1a1a;
+    color: #fff;
+    padding: 10px;
+}
+
+/* Layout */
+.films-container {
+    padding-bottom: 4rem;
+    width: 100%;
+}
+
+.films-grid-container {
+    padding: 2rem 3rem 4rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.films-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 2rem;
+}
+
+.category-section {
+    margin-bottom: 3rem;
+    padding-left: 3rem;
+}
+
+.category-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: #fff;
+    font-family: 'Playfair Display', serif;
+    letter-spacing: -0.02em;
+}
+
+/* Horizontal Scroll */
+.movie-row {
+    display: flex;
+    gap: 1.5rem;
+    overflow-x: auto;
+    padding-bottom: 1.5rem;
+    padding-right: 3rem;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    scroll-behavior: smooth;
+    mask-image: linear-gradient(to right, black 95%, transparent 100%);
+}
+
+.movie-row::-webkit-scrollbar {
+    display: none;
+}
+
+/* Movie Card in Films Page */
+.movie-card {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    min-width: 200px;
+    width: 200px;
+    flex-shrink: 0;
+    display: block;
+    /* Ensure it's block here vs flex in Chat */
+    margin-top: 0;
+    /* Reset Chat style */
+    max-width: none;
+    /* Reset Chat style */
+}
+
+.movie-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
+    border-color: rgba(255, 215, 0, 0.3);
+    background: rgba(255, 255, 255, 0.1);
+    /* Slightly lighter on hover */
+}
+
+.movie-poster-wrapper {
+    position: relative;
+    aspect-ratio: 2/3;
+    overflow: hidden;
+}
+
+.movie-poster {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.movie-card:hover .movie-poster {
+    transform: scale(1.05);
+}
+
+.movie-rating {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: rgba(0, 0, 0, 0.8);
+    color: #FFD700;
+    font-weight: 700;
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    font-size: 0.9rem;
+    backdrop-filter: blur(4px);
+    display: block;
+    /* Reset if flexible in Chat */
+}
+
+.movie-info {
+    padding: 1rem;
+}
+
+.movie-info h4 {
+    font-size: 1rem;
+    font-weight: 500;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .films-header {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 1.5rem;
+    }
+
+    .header-right {
+        margin-left: 0;
+        width: 100%;
+    }
+
+    .platform-filter {
+        width: 100%;
+    }
+
+    .films-grid-container {
+        padding: 1.5rem;
+    }
+
+    .films-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+
+    .category-section {
+        padding-left: 1rem;
+    }
+
+    .movie-row {
+        gap: 1rem;
+        padding-right: 1rem;
+    }
+
+    .movie-card {
+        min-width: 150px;
+        width: 150px;
+    }
+}

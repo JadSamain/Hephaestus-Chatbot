@@ -46,6 +46,26 @@ export default function Chat() {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
 
+    // Helper pour déterminer les étapes de chargement
+    const getLoadingSteps = (input) => {
+        const lowerInput = input.toLowerCase();
+        const movieKeywords = ['film', 'movie', 'acteur', 'réalisateur', 'voir', 'regarder', 'genre', 'série', 'show', 'cinema'];
+
+        // Si ça ressemble à une requête cinéma => Processus long (Scraping)
+        if (movieKeywords.some(keyword => lowerInput.includes(keyword))) {
+            return {
+                steps: ["Réflexion...", "Recherche sur IMDb...", "Analyse des plateformes...", "Génération de la réponse..."],
+                interval: 2500 // 2.5 secondes par étape pour laisser le temps de lire
+            };
+        }
+
+        // Sinon, chargement générique => Processus rapide (LLM pur)
+        return {
+            steps: ["Réflexion...", "Écriture de la réponse..."],
+            interval: 1000 // 1 seconde, ça doit aller vite
+        };
+    };
+
     useEffect(() => {
         scrollToBottom();
     }, [messages]);
@@ -162,19 +182,21 @@ export default function Chat() {
         const currentInput = inputValue;
         setInputValue("");
 
-        // Séquence de chargement
-        const steps = ["Réflexion...", "Recherche sur IMDb...", "Analyse des plateformes...", "Génération de la réponse..."];
+        // Séquence de chargement simple ou complexe
+        const loadingConfig = getLoadingSteps(currentInput);
+        const steps = loadingConfig.steps;
+
         setLoadingMessage(steps[0]);
-        setLoadingChatId(currentChatId); // On memorise quelle conv charge
+        setLoadingChatId(currentChatId);
         let stepIndex = 0;
 
-        // On change le message toutes les 2.5 secondes pour montrer que ça travaille
+        // On change le message en fonction de l'intervalle défini
         const intervalId = setInterval(() => {
             stepIndex++;
             if (stepIndex < steps.length) {
                 setLoadingMessage(steps[stepIndex]);
             }
-        }, 2500);
+        }, loadingConfig.interval);
 
         try {
             // On prépare les données pour le back
@@ -192,8 +214,6 @@ export default function Chat() {
             }
 
             const data = await response.json();
-
-
             // Gestion de l'erreur de scraping
             if (data.error === "scraping_failed") {
                 const botMessage = {
@@ -356,9 +376,8 @@ export default function Chat() {
                 <div className="chat-messages">
                     {messages.length === 0 ? (
                         <div className="empty-state">
-                            <div className="empty-state-icon">🎬</div>
-                            <h3>Bienvenue sur POPCORN</h3>
-                            <p>Je suis prêt à parler cinéma !</p>
+                            {/* <div className="empty-state-icon">🎬</div> */}
+                            <p>Qu’est-ce qui vous intéresse aujourd’hui ?</p>
                         </div>
                     ) : (
                         messages.map((message) => (
