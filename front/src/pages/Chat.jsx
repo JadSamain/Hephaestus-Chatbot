@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
+import MovieCard from "../components/MovieCard.jsx";
+import ConfirmationModal from "../components/ConfirmationModal.jsx";
 import "../App.css";
 
 import logo from "../img/logo.png";
@@ -9,8 +11,15 @@ export default function Chat() {
     const [currentChatId, setCurrentChatId] = useState(null);
     const [messages, setMessages] = useState([]);
     const [inputValue, setInputValue] = useState("");
-    const [isLoading, setIsLoading] = useState(false);
+    const [loadingMessage, setLoadingMessage] = useState(""); // État pour le message de chargement
+    const [loadingChatId, setLoadingChatId] = useState(null); // ID de la conv qui charge
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState(""); // Recherche
+    const [isSearchVisible, setIsSearchVisible] = useState(false); // Afficher/Masquer barre recherche
+
+    // State pour la modale de suppression
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [chatToDeleteId, setChatToDeleteId] = useState(null);
     const messagesEndRef = useRef(null);
 
     // Charger l'historique au démarrage
@@ -69,24 +78,58 @@ export default function Chat() {
     };
 
     const updateConversation = (chatId, newMessages) => {
-        // Copie du tableau pour ne pas modifier l'état directement
-        let newConversations = [...conversations];
+        setConversations(prevConversations => {
+            return prevConversations.map(chat => {
+                if (chat.id === chatId) {
+                    // Création d'une copie de l'objet chat pour éviter la mutation
+                    let updatedChat = { ...chat, messages: newMessages };
 
-        // On cherche la conversation à modifier
-        for (let i = 0; i < newConversations.length; i++) {
-            if (newConversations[i].id === chatId) {
-                newConversations[i].messages = newMessages;
-
-                // Si c'est le premier message on met le titre
-                if (newConversations[i].messages.length > 0 && newConversations[i].title === "Nouvelle conversation") {
-                    let firstMsg = newConversations[i].messages[0];
-                    if (firstMsg.sender === 'user') {
-                        newConversations[i].title = firstMsg.text.substring(0, 20) + "...";
+                    // Mise à jour du titre si nécessaire
+                    if (newMessages.length > 0 && chat.title === "Nouvelle conversation") {
+                        const firstMsg = newMessages[0];
+                        if (firstMsg.sender === 'user') {
+                            updatedChat.title = firstMsg.text.substring(0, 20) + "...";
+                        }
                     }
+                    return updatedChat;
+                }
+                return chat;
+            });
+        });
+    };
+
+    const deleteConversation = (e, chatId) => {
+        e.stopPropagation();
+        setChatToDeleteId(chatId);
+        setIsDeleteModalOpen(true);
+    };
+
+    const confirmDeleteConversation = () => {
+        if (chatToDeleteId) {
+            let newConversations = [];
+            for (let i = 0; i < conversations.length; i++) {
+                if (conversations[i].id !== chatToDeleteId) {
+                    newConversations.push(conversations[i]);
+                }
+            }
+            setConversations(newConversations);
+
+            // Si on supprime la conversation courante, on charge la première disponible ou on en crée une nouvelle
+            if (chatToDeleteId === currentChatId) {
+                if (newConversations.length > 0) {
+                    loadConversation(newConversations[0].id);
+                } else {
+                    createNewChat();
                 }
             }
         }
-        setConversations(newConversations);
+        setIsDeleteModalOpen(false);
+        setChatToDeleteId(null);
+    };
+
+    const cancelDeleteConversation = () => {
+        setIsDeleteModalOpen(false);
+        setChatToDeleteId(null);
     };
 
     const handleSendMessage = async (e) => {
@@ -118,13 +161,24 @@ export default function Chat() {
 
         const currentInput = inputValue;
         setInputValue("");
-        setIsLoading(true);
+
+        // Séquence de chargement
+        const steps = ["Réflexion...", "Recherche sur IMDb...", "Analyse des plateformes...", "Génération de la réponse..."];
+        setLoadingMessage(steps[0]);
+        setLoadingChatId(currentChatId); // On memorise quelle conv charge
+        let stepIndex = 0;
+
+        // On change le message toutes les 2.5 secondes pour montrer que ça travaille
+        const intervalId = setInterval(() => {
+            stepIndex++;
+            if (stepIndex < steps.length) {
+                setLoadingMessage(steps[stepIndex]);
+            }
+        }, 2500);
 
         try {
             // On prépare les données pour le back
             const donnee = { prompt: currentInput };
-
-            console.log("Envoi au serveur...");
 
             const response = await fetch('http://localhost:8000/chat/', {
                 method: 'POST',
@@ -134,18 +188,56 @@ export default function Chat() {
 
             if (response.status !== 200) {
                 alert("Erreur serveur !");
-                setIsLoading(false);
                 return;
             }
 
             const data = await response.json();
 
+
+            // Gestion de l'erreur de scraping
+            if (data.error === "scraping_failed") {
+                const botMessage = {
+                    id: Date.now() + 1,
+                    text: "Je n'ai pas réussi à récupérer les détails techniques, mais voici ce que je sais...\n\n" + (data.response || ""),
+                    sender: "bot",
+                    timestamp: timeString,
+                    type: "text",
+                    content: null
+                };
+
+                const finalMessages = [...updatedMessages, botMessage];
+                setMessages(finalMessages);
+                updateConversation(currentChatId, finalMessages);
+                return; // On arrête là pour ce cas
+            }
+
+            // On essaie de voir si c'est du JSON (film) ou du texte normal
+            let botText = data.response;
+            let msgType = 'text';
+            let movieData = null;
+
+            try {
+                // On tente de parser la réponse si c'est un JSON valide
+                if (data.response.trim().startsWith('{')) {
+                    const parsed = JSON.parse(data.response);
+                    if (parsed.type === 'movie_recommendation') {
+                        msgType = 'movie';
+                        movieData = parsed;
+                        botText = "Voici une recommandation pour vous :"; // Texte de fallback ou titre
+                    }
+                }
+            } catch (e) {
+                // Si ça échoue, c'est juste du texte normal
+            }
+
             // Réponse de l'IA
             const botMessage = {
                 id: Date.now() + 1,
-                text: data.response,
+                text: botText,
                 sender: "bot",
-                timestamp: timeString
+                timestamp: timeString,
+                type: msgType,
+                content: movieData
             };
 
             // On ajoute la réponse
@@ -154,11 +246,13 @@ export default function Chat() {
             updateConversation(currentChatId, finalMessages);
 
         } catch (error) {
-            console.log(error);
             alert("Impossible de contacter le serveur");
+        } finally {
+            // On nettoie tout
+            clearInterval(intervalId);
+            setLoadingMessage("");
+            setLoadingChatId(null);
         }
-
-        setIsLoading(false);
     };
 
     return (
@@ -172,17 +266,70 @@ export default function Chat() {
                     <span>+</span> Nouvelle conversation
                 </button>
 
+                <button onClick={() => setIsSearchVisible(!isSearchVisible)} className="search-toggle-btn">
+                    <span>🔍</span> Rechercher des chats
+                </button>
+
+                {isSearchVisible && (
+                    <input
+                        type="text"
+                        className="sidebar-search-input"
+                        placeholder="Mots-clés..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                )}
+
                 <div className="history-list">
-                    {conversations.map(chat => (
-                        <div
-                            key={chat.id}
-                            className={`history-item ${chat.id === currentChatId ? 'active' : ''}`}
-                            onClick={() => loadConversation(chat.id)}
-                        >
-                            <span className="history-item-icon">💬</span>
-                            {chat.title}
-                        </div>
-                    ))}
+                    {(() => {
+                        let filteredConversations = [];
+                        if (searchTerm === "") {
+                            filteredConversations = conversations;
+                        } else {
+                            // Style étudiant : boucle for simple et recherche profonde
+                            for (let i = 0; i < conversations.length; i++) {
+                                let found = false;
+                                const chat = conversations[i];
+                                const searchLower = searchTerm.toLowerCase();
+
+                                // 1. Vérifier le titre
+                                if (chat.title.toLowerCase().includes(searchLower)) {
+                                    found = true;
+                                }
+
+                                // 2. Vérifier les messages si pas trouvé dans le titre
+                                if (!found && chat.messages) {
+                                    for (let j = 0; j < chat.messages.length; j++) {
+                                        if (chat.messages[j].text && chat.messages[j].text.toLowerCase().includes(searchLower)) {
+                                            found = true;
+                                            break;
+                                        }
+                                    }
+                                }
+
+                                if (found) {
+                                    filteredConversations.push(chat);
+                                }
+                            }
+                        }
+
+                        return filteredConversations.map(chat => (
+                            <div
+                                key={chat.id}
+                                className={`history-item ${chat.id === currentChatId ? 'active' : ''}`}
+                                onClick={() => loadConversation(chat.id)}
+                            >
+                                <span className="history-item-icon">💬</span>
+                                <span className="history-item-title">{chat.title}</span>
+                                <button
+                                    className="delete-conv-btn"
+                                    onClick={(e) => deleteConversation(e, chat.id)}
+                                >
+                                    🗑️
+                                </button>
+                            </div>
+                        ));
+                    })()}
                 </div>
 
                 <Link to="/" className="back-btn" style={{ marginTop: 'auto' }}>
@@ -220,7 +367,17 @@ export default function Chat() {
                                     {message.sender === "user" ? "👤" : "🎬"}
                                 </div>
                                 <div className="message-content">
-                                    <p>{message.text}</p>
+                                    {message.type === 'movie' && message.content ? (
+                                        <MovieCard
+                                            title={message.content.title}
+                                            year={message.content.year}
+                                            poster={message.content.poster}
+                                            rating={message.content.rating}
+                                            platforms={message.content.platforms}
+                                        />
+                                    ) : (
+                                        <p>{message.text}</p>
+                                    )}
                                     <small style={{ opacity: 0.7, fontSize: '0.85rem' }}>
                                         {message.timestamp}
                                     </small>
@@ -228,11 +385,11 @@ export default function Chat() {
                             </div>
                         ))
                     )}
-                    {isLoading && (
+                    {loadingMessage && loadingChatId === currentChatId && (
                         <div className="message bot">
                             <div className="message-avatar">🎬</div>
                             <div className="message-content">
-                                <p>Recherche en cours...</p>
+                                <p className="loading-text">{loadingMessage}</p>
                             </div>
                         </div>
                     )}
@@ -247,18 +404,25 @@ export default function Chat() {
                             placeholder="Ex: Où puis-je regarder Inception ?"
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
-                            disabled={isLoading}
+                            disabled={!!loadingMessage}
                         />
                         <button
                             type="submit"
                             className="send-btn"
-                            disabled={isLoading || !inputValue.trim()}
+                            disabled={!!loadingMessage || !inputValue.trim()}
                         >
                             Envoyer
                         </button>
                     </form>
                 </div>
-            </div>
-        </div>
+            </div >
+
+            <ConfirmationModal
+                isOpen={isDeleteModalOpen}
+                onClose={cancelDeleteConversation}
+                onConfirm={confirmDeleteConversation}
+                message="Êtes-vous sûr de vouloir supprimer cette conversation ? Cette action est irréversible."
+            />
+        </div >
     );
 }
