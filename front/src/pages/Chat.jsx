@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import MovieCard from "../components/MovieCard.jsx";
+import ConfirmationModal from "../components/ConfirmationModal.jsx";
 import "../App.css";
 
 import logo from "../img/logo.png";
@@ -16,6 +17,10 @@ export default function Chat() {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState(""); // Recherche
     const [isSearchVisible, setIsSearchVisible] = useState(false); // Afficher/Masquer barre recherche
+
+    // State pour la modale de suppression
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [chatToDeleteId, setChatToDeleteId] = useState(null);
     const messagesEndRef = useRef(null);
 
     // Charger l'historique au démarrage
@@ -95,18 +100,37 @@ export default function Chat() {
     };
 
     const deleteConversation = (e, chatId) => {
-        e.stopPropagation(); // Pour ne pas ouvrir la conversation en cliquant sur supprimer
+        e.stopPropagation();
+        setChatToDeleteId(chatId);
+        setIsDeleteModalOpen(true);
+    };
 
-        if (confirm("Supprimer cette conversation ?")) {
+    const confirmDeleteConversation = () => {
+        if (chatToDeleteId) {
             let newConversations = [];
             for (let i = 0; i < conversations.length; i++) {
-                if (conversations[i].id !== chatId) {
+                if (conversations[i].id !== chatToDeleteId) {
                     newConversations.push(conversations[i]);
                 }
             }
             setConversations(newConversations);
 
+            // Si on supprime la conversation courante, on charge la première disponible ou on en crée une nouvelle
+            if (chatToDeleteId === currentChatId) {
+                if (newConversations.length > 0) {
+                    loadConversation(newConversations[0].id);
+                } else {
+                    createNewChat();
+                }
+            }
         }
+        setIsDeleteModalOpen(false);
+        setChatToDeleteId(null);
+    };
+
+    const cancelDeleteConversation = () => {
+        setIsDeleteModalOpen(false);
+        setChatToDeleteId(null);
     };
 
     const handleSendMessage = async (e) => {
@@ -230,7 +254,7 @@ export default function Chat() {
                 </button>
 
                 <button onClick={() => setIsSearchVisible(!isSearchVisible)} className="search-toggle-btn">
-                    <span>🔍</span> Rechercher
+                    <span>🔍</span> Rechercher des chats
                 </button>
 
                 {isSearchVisible && (
@@ -379,6 +403,13 @@ export default function Chat() {
                     </form>
                 </div>
             </div >
+
+            <ConfirmationModal
+                isOpen={isDeleteModalOpen}
+                onClose={cancelDeleteConversation}
+                onConfirm={confirmDeleteConversation}
+                message="Êtes-vous sûr de vouloir supprimer cette conversation ? Cette action est irréversible."
+            />
         </div >
     );
 }
