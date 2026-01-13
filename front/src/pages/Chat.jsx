@@ -133,15 +133,30 @@ export default function Chat() {
                     newConversations.push(conversations[i]);
                 }
             }
-            setConversations(newConversations);
 
-            // Si on supprime la conversation courante, on charge la première disponible ou on en crée une nouvelle
+            // Si on supprime la conversation courante
             if (chatToDeleteId === currentChatId) {
                 if (newConversations.length > 0) {
+                    setConversations(newConversations);
                     loadConversation(newConversations[0].id);
                 } else {
-                    createNewChat();
+                    // Si plus aucune conversation, on en crée une vierge directement
+                    // pour éviter d'utiliser la state 'conversations' qui n'est pas encore mise à jour
+                    // si on appelait createNewChat()
+                    const newChat = {
+                        id: Date.now(),
+                        title: "Nouvelle conversation",
+                        messages: [],
+                        date: new Date().toISOString()
+                    };
+                    setConversations([newChat]);
+                    setCurrentChatId(newChat.id);
+                    setMessages([]);
+                    setIsSidebarOpen(false);
                 }
+            } else {
+                // Si on supprime une autre conversation que la courante
+                setConversations(newConversations);
             }
         }
         setIsDeleteModalOpen(false);
