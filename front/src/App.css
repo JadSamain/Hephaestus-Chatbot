@@ -796,7 +796,32 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  margin-top: 0.25rem;
+  margin-top: 0.5rem;
+}
+
+.platform-logo-badge {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 60px;
+  height: 32px;
+  transition: all 0.2s ease;
+}
+
+.platform-logo-badge:hover {
+  background: rgba(255, 215, 0, 0.1);
+  border-color: rgba(255, 215, 0, 0.3);
+}
+
+.platform-logo-img {
+  max-width: 50px;
+  max-height: 20px;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
 }
 
 .platform-badge {

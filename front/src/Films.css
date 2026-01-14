@@ -231,6 +231,7 @@
     /* Reset Chat style */
     max-width: none;
     /* Reset Chat style */
+    cursor: pointer;
 }
 
 .movie-card:hover {

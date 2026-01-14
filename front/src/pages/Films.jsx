@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import logo from "../img/logo.png";
+import MovieDetailsSidebar from "../components/MovieDetailsSidebar.jsx";
 import "../Films.css";
 
 const platformsList = [
@@ -62,6 +63,8 @@ const categories = [
 
 export default function Films() {
     const [selectedPlatform, setSelectedPlatform] = useState("All");
+    const [selectedMovie, setSelectedMovie] = useState(null);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const filmsRef = useRef(null);
     const aboutRef = useRef(null);
 
@@ -127,7 +130,14 @@ export default function Films() {
                                 <h3 className="category-title">{category.title}</h3>
                                 <div className="movie-row">
                                     {category.movies.map((movie) => (
-                                        <div key={movie.id} className="movie-card">
+                                        <div
+                                            key={movie.id}
+                                            className="movie-card"
+                                            onClick={() => {
+                                                setSelectedMovie(movie);
+                                                setIsSidebarOpen(true);
+                                            }}
+                                        >
                                             <div className="movie-poster-wrapper">
                                                 <img src={movie.poster} alt={movie.title} className="movie-poster" />
                                                 <div className="movie-rating">{movie.rating}</div>
@@ -194,6 +204,12 @@ export default function Films() {
                     </div>
                 </div>
             </div>
+
+            <MovieDetailsSidebar
+                movie={selectedMovie}
+                isOpen={isSidebarOpen}
+                onClose={() => setIsSidebarOpen(false)}
+            />
         </div>
     );
 }
