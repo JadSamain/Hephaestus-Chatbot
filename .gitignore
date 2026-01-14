@@ -229,3 +229,6 @@ dist/
 .env.local
 .vite/
 EOF
+front/package-lock.json
+front/package.json
+front/vite.config.js
