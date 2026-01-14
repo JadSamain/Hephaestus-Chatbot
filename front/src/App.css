@@ -517,10 +517,52 @@ body {
 }
 
 /* Loading Animation */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
 .loading-text {
   animation: pulseText 1.5s infinite;
   font-style: italic;
   opacity: 0.8;
+  margin: 0;
+}
+
+.typing-indicator {
+  display: flex;
+  gap: 4px;
+  padding-left: 2px;
+}
+
+.typing-indicator span {
+  width: 6px;
+  height: 6px;
+  background-color: #FFD700;
+  border-radius: 50%;
+  animation: bounce 1.4s infinite ease-in-out both;
+}
+
+.typing-indicator span:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.typing-indicator span:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+@keyframes bounce {
+
+  0%,
+  80%,
+  100% {
+    transform: scale(0);
+  }
+
+  40% {
+    transform: scale(1);
+  }
 }
 
 @keyframes pulseText {
@@ -536,6 +578,7 @@ body {
     opacity: 0.5;
   }
 }
+
 
 .send-btn {
   padding: 1rem 2rem;

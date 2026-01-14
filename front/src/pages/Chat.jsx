@@ -55,21 +55,25 @@ export default function Chat() {
         // Si ça ressemble à une requête cinéma => Processus long (Scraping)
         if (movieKeywords.some(keyword => lowerInput.includes(keyword))) {
             return {
-                steps: ["Réflexion...", "Recherche sur IMDb...", "Analyse des plateformes...", "Génération de la réponse..."],
-                interval: 2500 // 2.5 secondes par étape pour laisser le temps de lire
+                steps: ["Popcorn cherche dans les archives...", "Analyse des critiques IMDb...", "Comparaison des plateformes...", "Rédaction de votre réponse..."],
+                interval: 2500 // 2.5 secondes par étape
             };
         }
 
         // Sinon, chargement générique => Processus rapide (LLM pur)
         return {
-            steps: ["Réflexion..."],
-            interval: 1000 // 1 seconde, ça doit aller vite
+            steps: ["Popcorn réfléchit..."],
+            interval: 1000
         };
     };
 
     useEffect(() => {
         scrollToBottom();
     }, [messages]);
+
+    // ... (unchanged code)
+
+
 
     const createNewChat = () => {
         const newChat = {
@@ -387,9 +391,7 @@ export default function Chat() {
                         <span className="status-indicator"></span>
                         POPCORN Chat
                     </h2>
-                    <Link to="/about" className="about-link" style={{ marginLeft: 'auto', textDecoration: 'none', backgroundColor: '#FFD700', color: '#0a0a0a', border: 'none', padding: '8px 16px', borderRadius: '20px', fontSize: '0.9rem', fontWeight: '600', transition: 'transform 0.2s', boxShadow: '0 4px 6px rgba(0,0,0,0.3)' }}>
-                        À propos
-                    </Link>
+
                 </div>
 
                 <div className="chat-messages">
@@ -426,8 +428,13 @@ export default function Chat() {
                     {loadingMessage && loadingChatId === currentChatId && (
                         <div className="message bot">
                             <div className="message-avatar">🎬</div>
-                            <div className="message-content">
+                            <div className="message-content loading-container">
                                 <p className="loading-text">{loadingMessage}</p>
+                                <div className="typing-indicator">
+                                    <span></span>
+                                    <span></span>
+                                    <span></span>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -459,7 +466,7 @@ export default function Chat() {
                 isOpen={isDeleteModalOpen}
                 onClose={cancelDeleteConversation}
                 onConfirm={confirmDeleteConversation}
-                message="Êtes-vous sûr de vouloir supprimer cette conversation ? Cette action est irréversible."
+                message="Êtes-vous sûr de vouloir supprimer le chat ? Cette action est irréversible."
             />
         </div >
     );

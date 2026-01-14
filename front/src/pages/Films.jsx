@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Link } from "react-router-dom";
+import logo from "../img/logo.png";
 import "../Films.css";
 
 const platformsList = [
@@ -61,6 +62,12 @@ const categories = [
 
 export default function Films() {
     const [selectedPlatform, setSelectedPlatform] = useState("All");
+    const filmsRef = useRef(null);
+    const aboutRef = useRef(null);
+
+    const scrollToSection = (ref) => {
+        ref.current?.scrollIntoView({ behavior: "smooth" });
+    };
 
     const filteredCategories = categories.map(category => ({
         ...category,
@@ -71,52 +78,121 @@ export default function Films() {
 
     return (
         <div className="page films-page">
-            <header className="films-header">
-                <div className="header-left">
-                    <h2>Films Populaires</h2>
-                    <Link to="/" className="back-btn">← Retour</Link>
+            <nav className="top-navbar">
+                <div className="nav-left">
+                    <img src={logo} alt="Logo" className="nav-logo" />
+                    <span className="brand-name">POPCORN</span>
                 </div>
-                <div className="header-right">
-                    <select
-                        className="platform-filter"
-                        value={selectedPlatform}
-                        onChange={(e) => setSelectedPlatform(e.target.value)}
+                <div className="nav-links">
+                    <span
+                        className="nav-link"
+                        onClick={() => scrollToSection(filmsRef)}
                     >
-                        <option value="All">Toutes les plateformes</option>
-                        {platformsList.map(platform => (
-                            <option key={platform} value={platform}>{platform}</option>
-                        ))}
-                    </select>
+                        Films
+                    </span>
+                    <Link to="/chat" className="nav-btn-framed">ChatBot</Link>
+                    <span
+                        className="nav-link"
+                        onClick={() => scrollToSection(aboutRef)}
+                    >
+                        À propos
+                    </span>
                 </div>
-            </header>
+            </nav>
 
-            <div className="films-container">
-                {filteredCategories.length > 0 ? (
-                    filteredCategories.map((category, index) => (
-                        <div key={index} className="category-section">
-                            <h3 className="category-title">{category.title}</h3>
-                            <div className="movie-row">
-                                {category.movies.map((movie) => (
-                                    <div key={movie.id} className="movie-card">
-                                        <div className="movie-poster-wrapper">
-                                            <img src={movie.poster} alt={movie.title} className="movie-poster" />
-                                            <div className="movie-rating">{movie.rating}</div>
+            <div ref={filmsRef}>
+                <header className="films-header">
+                    <div className="header-left">
+                        <h2>Films Populaires</h2>
+                        <Link to="/" className="back-btn">← Retour</Link>
+                    </div>
+                    <div className="header-right">
+                        <select
+                            className="platform-filter"
+                            value={selectedPlatform}
+                            onChange={(e) => setSelectedPlatform(e.target.value)}
+                        >
+                            <option value="All">Toutes les plateformes</option>
+                            {platformsList.map(platform => (
+                                <option key={platform} value={platform}>{platform}</option>
+                            ))}
+                        </select>
+                    </div>
+                </header>
+
+                <div className="films-container">
+                    {filteredCategories.length > 0 ? (
+                        filteredCategories.map((category, index) => (
+                            <div key={index} className="category-section">
+                                <h3 className="category-title">{category.title}</h3>
+                                <div className="movie-row">
+                                    {category.movies.map((movie) => (
+                                        <div key={movie.id} className="movie-card">
+                                            <div className="movie-poster-wrapper">
+                                                <img src={movie.poster} alt={movie.title} className="movie-poster" />
+                                                <div className="movie-rating">{movie.rating}</div>
+                                            </div>
+                                            <div className="movie-info">
+                                                <h4>{movie.title}</h4>
+                                            </div>
                                         </div>
-                                        <div className="movie-info">
-                                            <h4>{movie.title}</h4>
-                                        </div>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="empty-state">
+                            <div className="empty-state-icon">🎬</div>
+                            <h3>Aucun film trouvé</h3>
+                            <p>Essayez de choisir une autre plateforme.</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            <div ref={aboutRef} className="about-section">
+                <div className="about-content">
+                    <h2 className="about-main-title">
+                        <span className="info-icon">ⓘ</span> À propos de POPCORN
+                    </h2>
+
+                    <div className="about-card">
+                        <h3>Projet HEPHAESTUS</h3>
+                        <p>
+                            POPCORN est un assistant cinéma intelligent propulsé par l'IA. Il combine une base de connaissances locale avec des
+                            outils de scraping et des API externes pour vous fournir des informations complètes sur les films.
+                        </p>
+                    </div>
+
+                    <div className="about-card">
+                        <h3>Fonctionnalités</h3>
+                        <ul className="features-list">
+                            <li>Recherche de films et séries</li>
+                            <li>Informations détaillées (notes, réalisateur, année, durée)</li>
+                            <li>Disponibilité sur les plateformes de streaming</li>
+                            <li>Recommandations personnalisées</li>
+                            <li>Chat intelligent pour vos questions cinéma</li>
+                        </ul>
+                    </div>
+
+                    <div className="about-card">
+                        <h3>Sources de données</h3>
+                        <div className="data-sources-list">
+                            <div className="source-item">
+                                <span className="source-badge">Base de données locale</span>
+                                <span className="source-desc">Catalogue de films et métadonnées</span>
+                            </div>
+                            <div className="source-item">
+                                <span className="source-badge">Scraping IMDb</span>
+                                <span className="source-desc">Notes et critiques</span>
+                            </div>
+                            <div className="source-item">
+                                <span className="source-badge">API JustWatch</span>
+                                <span className="source-desc">Disponibilité streaming</span>
                             </div>
                         </div>
-                    ))
-                ) : (
-                    <div className="empty-state">
-                        <div className="empty-state-icon">🎬</div>
-                        <h3>Aucun film trouvé</h3>
-                        <p>Essayez de choisir une autre plateforme.</p>
                     </div>
-                )}
+                </div>
             </div>
         </div>
     );
