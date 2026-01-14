@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import chat  # Import indispensable
+from app.routers import chat, films  # Import indispensable
 
 app = FastAPI(title="Hephaestus Backend", version="0.1.0")
 
@@ -13,8 +13,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Inclusion du router de chat
+# Inclusion des routers
 app.include_router(chat.router)
+app.include_router(films.router)
 
 @app.get("/health")
 async def health_check():
