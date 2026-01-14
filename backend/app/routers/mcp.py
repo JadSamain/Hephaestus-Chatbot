@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from datetime import datetime, timezone
 
 import pandas as pd
-from mcp.server.fastmcp import FastMCP
+from backend.app.routers.mcp.server.fastbackend.app.routers.mcp import FastMCP
 
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
 
