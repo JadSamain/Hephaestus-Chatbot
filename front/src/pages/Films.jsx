@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import "../film.css";
+import "./Films.css";
 
 const platformsList = [
     "Netflix", "Prime Video", "Disney+", "Max", "Hulu",
@@ -268,7 +269,18 @@ export default function Films() {
                         <h1 className="logo-text">POPCORN</h1>
                     </div>
                     <div className="nav-links">
-                        <h2 className="active-nav">Films</h2>
+                        <NavLink to="/" className={({ isActive }) => `nav-btn ${isActive ? "active" : ""}`}>
+                            Accueil
+                        </NavLink>
+                        <NavLink to="/films" className={({ isActive }) => `nav-btn ${isActive ? "active" : ""}`}>
+                            Films
+                        </NavLink>
+                        <NavLink to="/chat" className={({ isActive }) => `nav-btn ${isActive ? "active" : ""}`}>
+                            Chat
+                        </NavLink>
+                        <NavLink to="/about" className={({ isActive }) => `nav-btn ${isActive ? "active" : ""}`}>
+                            À propos
+                        </NavLink>
                     </div>
                 </div>
                 <div className="header-right">
