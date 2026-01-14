@@ -1,50 +1,16 @@
-/* Navigation buttons in header */
-.nav-btn {
-    text-decoration: none;
-    padding: 0.5rem 1.5rem;
-    border: 1px solid #ffd700;
-    /* Yellow outline */
-    color: #ffd700;
-    border-radius: 4px;
-    font-weight: 500;
-    transition: all 0.3s ease;
-    background: transparent;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.95rem;
-    /* Match header font size roughly */
-}
-
-.nav-btn:hover {
-    background-color: rgba(255, 215, 0, 0.1);
-    color: #fff;
-    border-color: #fff;
-    box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
-}
-
-.nav-btn:focus {
-    outline: 2px solid #fff;
-    outline-offset: 2px;
-}
-
-.nav-btn.active {
-    background-color: #ffd700;
-    color: #000;
-    font-weight: 700;
-}
-
-/* 
-   Full Page Background Fix:
-   Using a fixed pseudo-element on the page wrapper ensures the background 
-   covers the entire viewport, even when scrolling.
-*/
+/* Global Page Styles */
 .films-page {
-    /* Override existing background if set in film.css */
+    /* Full Page Background Fix */
     background: transparent !important;
     position: relative;
     isolation: isolate;
-    /* Create new stacking context */
+    height: 100vh;
+    width: 100%;
+    max-width: 100vw;
+    /* Force viewport width */
+    overflow-x: hidden;
+    /* Prevent horizontal scroll of the page itself */
+    overflow-y: auto;
 }
 
 .films-page::before {
@@ -55,19 +21,417 @@
     width: 100%;
     height: 100%;
     z-index: -2;
-    /* Behind everything */
-    /* Deep bordeaux gradient with subtle noise/texture feel */
     background: linear-gradient(135deg, #1f0101 0%, #300303 50%, #1f0101 100%);
     background-attachment: fixed;
-    /* Extra safety */
 }
 
-/* Optional: Add a subtle overlay for depth if desired, but gradient above handles it cleanly */
+/* Header & Navigation - Scoped to override film.css if needed */
+.films-page .films-header {
+    width: 100%;
+    max-width: 100vw;
+    box-sizing: border-box;
+    /* Ensure padding doesn't add to width */
+}
 
-/* Responsive adjustments */
+.films-page .header-right {
+    position: relative;
+    z-index: 1500;
+}
+
+.nav-btn {
+    text-decoration: none;
+    padding: 0.5rem 1.5rem;
+    border: 1px solid #ffd700;
+    color: #ffd700;
+    border-radius: 4px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    background: transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    margin-right: 0.5rem;
+}
+
+.nav-btn:hover {
+    background-color: rgba(255, 215, 0, 0.1);
+    color: #fff;
+    border-color: #fff;
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+}
+
+.nav-btn.active {
+    background-color: #ffd700;
+    color: #000;
+    font-weight: 700;
+}
+
 @media (max-width: 900px) {
     .nav-btn {
         padding: 0.4rem 1rem;
         font-size: 0.9rem;
     }
+}
+
+/* Platform Filter Dropdown */
+.platform-filter-container {
+    position: relative;
+    z-index: 1500;
+}
+
+.platform-filter-btn {
+    background: rgba(30, 30, 30, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    /* Prevent breaking */
+}
+
+.platform-filter-btn:hover,
+.platform-filter-btn.open {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: #FFD700;
+}
+
+.platform-filter-btn.active {
+    border-color: #FFD700;
+    color: #FFD700;
+    background: rgba(255, 215, 0, 0.1);
+}
+
+.filter-chevron {
+    font-size: 0.7rem;
+    opacity: 0.7;
+}
+
+/* Dropdown Menu */
+.platform-dropdown {
+    position: absolute;
+    top: 120%;
+    right: 0;
+    width: 280px;
+    background: #1a1a1a;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+    overflow: hidden;
+    animation: fadeInDropdown 0.2s ease-out;
+    padding-bottom: 0.5rem;
+    z-index: 1501;
+}
+
+@keyframes fadeInDropdown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dropdown-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.8rem 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 0.85rem;
+    color: #888;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+}
+
+.clear-btn {
+    background: transparent;
+    border: none;
+    color: #FFD700;
+    font-size: 0.8rem;
+    cursor: pointer;
+    padding: 0;
+}
+
+.clear-btn:hover {
+    text-decoration: underline;
+}
+
+.platform-list {
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 0.5rem 0;
+}
+
+/* Scrollbar styling for dropdown */
+.platform-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.platform-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+}
+
+.platform-item {
+    display: flex;
+    align-items: center;
+    padding: 0.6rem 1rem;
+    cursor: pointer;
+    transition: background 0.2s;
+    gap: 12px;
+}
+
+.platform-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.platform-item.selected {
+    background: rgba(255, 215, 0, 0.05);
+}
+
+.platform-checkbox {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    color: #000;
+    flex-shrink: 0;
+    background: transparent;
+}
+
+.platform-item.selected .platform-checkbox {
+    background: #FFD700;
+    border-color: #FFD700;
+}
+
+/* Logo Styling */
+.platform-logo-placeholder {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.platform-logo-placeholder img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 2;
+}
+
+.logo-text-fallback {
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.9rem;
+    z-index: 1;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.platform-name {
+    font-size: 0.95rem;
+    color: #eee;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+
+/* Carousel Layout - Specificity boosted to override film.css */
+.films-page .films-container {
+    padding-top: 2rem;
+    padding-bottom: 4rem;
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
+}
+
+.category-section {
+    margin-bottom: 3rem;
+    position: relative;
+    padding-left: 3rem;
+    /* Ensure no overflow from title/padding */
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.category-title {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.8rem;
+    color: #e5e5e5;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.carousel-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+}
+
+/* The horizontal scrolling row - Increased Specificity */
+.films-page .movie-row {
+    display: flex;
+    gap: 1rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 1rem 0 2rem 0;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    /* Ensure it respects parent width */
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    /* Override film.css padding */
+    padding-right: 3rem;
+
+    /* Scrollbar hiding */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.films-page .movie-row::-webkit-scrollbar {
+    display: none;
+}
+
+.films-page .movie-row:active {
+    cursor: grabbing;
+}
+
+.films-page .movie-row:hover .carousel-nav {
+    opacity: 1;
+}
+
+/* Navigation Chevrons */
+.carousel-nav {
+    position: absolute;
+    top: 50%;
+    /* Center vertically relative to wrapper, might need adjust */
+    transform: translateY(-50%);
+    z-index: 10;
+    background: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    border: none;
+    width: 50px;
+    height: 100%;
+    /* Cover full height of row? or just button */
+    height: 80%;
+    /* Almost full height */
+    font-size: 2rem;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.3s, background 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Reset margins/paddings */
+}
+
+.carousel-nav:hover {
+    background: rgba(20, 20, 20, 0.7);
+    color: #FFD700;
+}
+
+.carousel-nav.left {
+    left: -3rem;
+    /* Pull out into the margin */
+    border-top-right-radius: 4px;
+    border-bottom-right-radius: 4px;
+}
+
+.carousel-nav.right {
+    right: 0;
+    border-top-left-radius: 4px;
+    border-bottom-left-radius: 4px;
+}
+
+/* Movie Card Styles (Restoring/Ensuring consistency) */
+.movie-card {
+    min-width: 250px;
+    /* Base width */
+    width: 250px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.3s ease, z-index 0.3s;
+    position: relative;
+}
+
+/* Hover Effect: Scale up */
+.movie-card:hover {
+    transform: scale(1.1);
+    z-index: 20;
+}
+
+.movie-poster-wrapper {
+    width: 100%;
+    aspect-ratio: 2/3;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 4px 5px rgba(0, 0, 0, 0.4);
+}
+
+.movie-poster {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.movie-rating {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(0, 0, 0, 0.8);
+    color: #FFD700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 0.8rem;
+    display: flex;
+    gap: 3px;
+}
+
+.movie-rating::before {
+    content: "★";
+}
+
+.movie-info {
+    margin-top: 0.8rem;
+    padding: 0 0.5rem;
+}
+
+.movie-info h4 {
+    margin: 0;
+    font-size: 1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #ddd;
 }
