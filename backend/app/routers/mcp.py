@@ -46,8 +46,10 @@ def load_or_init_csv() -> pd.DataFrame:
         print(f"[WARN] CSV introuvable. Création : {CSV_PATH}")
         return pd.DataFrame(columns=REQUIRED_COLUMNS)
     try:
-        df = pd.read_csv(CSV_PATH, on_bad_lines='skip', encoding='utf-8')
-        # Vérif des colonnes
+        # engine='python' + sep=None permet de détecter automatiquement ',' ou ';'
+        df = pd.read_csv(CSV_PATH, sep=None, engine='python', on_bad_lines='skip', encoding='utf-8')
+        
+        # Vérification et ajout des colonnes manquantes
         for col in REQUIRED_COLUMNS:
             if col not in df.columns:
                 df[col] = None
@@ -56,10 +58,17 @@ def load_or_init_csv() -> pd.DataFrame:
         print(f"[ERR] CSV Corrompu ({e}). Reset.")
         return pd.DataFrame(columns=REQUIRED_COLUMNS)
 
-# Initialisation du Cache
+# --- Initialisation du Cache (Modifiée pour être robuste) ---
 DF = load_or_init_csv()
-if "_title_norm" not in DF.columns:
-    DF["_title_norm"] = DF["title"].astype(str).apply(normalize_text)
+
+# On force la conversion en string pour éviter les erreurs "Can only use .str accessor"
+DF["title"] = DF["title"].fillna("").astype(str)
+
+# IMPORTANT : On régénère TOUJOURS la colonne de recherche au démarrage
+# Cela répare les lignes ajoutées manuellement qui n'auraient pas de _title_norm
+DF["_title_norm"] = DF["title"].apply(normalize_text)
+
+print(f"✓ Cache chargé : {len(DF)} films en mémoire.")
 
 # -----------------------------
 # Scraper Logic (ROBUSTE)
