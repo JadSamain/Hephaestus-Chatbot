@@ -41,33 +41,21 @@ async def ask_hephaestus(request: ChatRequest):
 
             if tool_request.action == "get_movie_data":
                 movie_title = tool_request.parameters.get("title")
-                print(f"[*] Recherche active pour : {movie_title}")
-
-                # --- ÉTAPE 3 : ORCHESTRATION (La connexion Base/Scrape) ---
                 
-                # A. Recherche (Cache Local OU Scrape Live via mcp.py)
-                # Note: Assure-toi que search_movie dans mcp.py est 'async' 
-                # sinon enlève le 'await'
-                search_results = await mcp_tools.search_movie(movie_title, limit=1)
+                # Appel direct à l'outil unifié
+                # Note: Assure-toi d'importer find_movie_smart depuis mcp
+                # from .mcp import find_movie_smart 
                 
-                tool_result = {}
+                result = await mcp_tools.find_movie_smart(movie_title)
                 
-                if not search_results:
-                    tool_result = {"found": False, "message": "Film introuvable sur les plateformes suivies."}
+                if result and "error" not in result:
+                    tool_result = {
+                        "found": True, 
+                        "data": result,
+                        "source": "Local CSV" if "show_id" in result else "Web" # Simplifié car tout est merge
+                    }
                 else:
-                    # B. Récupération des détails via la clé correcte
-                    best_match = search_results[0]
-                    
-                    # On utilise explicitement 'show_id' (clé du CSV)
-                    movie_id = best_match.get("show_id")
-                    
-                    if movie_id is not None:
-                        # Récupération fiche complète avec cast propre
-                        full_details = await mcp_tools.get_movie(int(movie_id))
-                        tool_result = full_details
-                    else:
-                        print("[!] Erreur : show_id introuvable dans les résultats")
-                        tool_result = {"found": False, "message": "Erreur technique d'identification du film."}
+                    tool_result = {"found": False, "message": "Introuvable."}
 
                 # --- ÉTAPE 4 : SYNTHÈSE (Réponse à l'utilisateur) ---
                 writer_system_prompt = """
