@@ -176,7 +176,6 @@ export default function Films() {
                             <li>Informations détaillées (notes, réalisateur, année, durée)</li>
                             <li>Disponibilité sur les plateformes de streaming</li>
                             <li>Recommandations personnalisées</li>
-                            <li>Chat intelligent pour vos questions cinéma</li>
                         </ul>
                     </div>
 
@@ -188,12 +187,8 @@ export default function Films() {
                                 <span className="source-desc">Catalogue de films et métadonnées</span>
                             </div>
                             <div className="source-item">
-                                <span className="source-badge">Scraping IMDb</span>
+                                <span className="source-badge">Scraping Movie of the night</span>
                                 <span className="source-desc">Notes et critiques</span>
-                            </div>
-                            <div className="source-item">
-                                <span className="source-badge">API JustWatch</span>
-                                <span className="source-desc">Disponibilité streaming</span>
                             </div>
                         </div>
                     </div>
