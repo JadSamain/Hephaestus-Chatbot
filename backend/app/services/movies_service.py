@@ -69,7 +69,10 @@ class MoviesService:
                     "rating": float(row.get("rating", 0)) if pd.notna(row.get("rating")) else 0,
                     "poster": str(row.get("poster_url", "")),
                     "platforms": platforms_list,
-                    "genre": str(row.get("tags", "")) if pd.notna(row.get("tags")) else ""
+                    "genre": str(row.get("tags", "")) if pd.notna(row.get("tags")) else "",
+                    "synopsis": str(row.get("summary", "")) if pd.notna(row.get("summary")) else "Synopsis non disponible",
+                    "director": str(row.get("director", "")) if pd.notna(row.get("director")) else "Inconnu",
+                    "actors": [a.strip() for a in str(row.get("starring", "")).split(",")[:3]] if pd.notna(row.get("starring")) else []
                 }
                 movies.append(movie)
             except Exception as e:

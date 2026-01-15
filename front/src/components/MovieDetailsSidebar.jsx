@@ -38,6 +38,31 @@ export default function MovieDetailsSidebar({ movie, isOpen, onClose }) {
                     <div className="sidebar-info">
                         <h2>{movie.title}</h2>
 
+                        {movie.synopsis && (
+                            <div className="info-section">
+                                <h3>Synopsis</h3>
+                                <p className="synopsis-text">{movie.synopsis}</p>
+                            </div>
+                        )}
+
+                        {movie.director && (
+                            <div className="info-section">
+                                <h3>Réalisation</h3>
+                                <p className="director-name">{movie.director}</p>
+                            </div>
+                        )}
+
+                        {movie.actors && movie.actors.length > 0 && (
+                            <div className="info-section">
+                                <h3>Distribution</h3>
+                                <div className="actors-list">
+                                    {movie.actors.map((actor, idx) => (
+                                        <span key={idx} className="actor-badge">{actor}</span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         <div className="info-section">
                             <h3>Disponible sur</h3>
                             <div className="platforms-grid">
