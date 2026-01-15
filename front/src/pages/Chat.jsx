@@ -300,7 +300,9 @@ export default function Chat() {
             {/* Sidebar */}
             <div className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
                 <div className="sidebar-header">
-                    <img src={logo} alt="Popcorn Chat Logo" className="sidebar-logo" />
+                    <Link to="/">
+                        <img src={logo} alt="Popcorn Chat Logo" className="sidebar-logo" />
+                    </Link>
                 </div>
                 <button onClick={createNewChat} className="new-chat-btn">
                     <span>+</span> Nouvelle conversation
@@ -372,8 +374,8 @@ export default function Chat() {
                     })()}
                 </div>
 
-                <Link to="/" className="back-btn" style={{ marginTop: 'auto' }}>
-                    ← Menu Principal
+                <Link to="/films" className="back-btn" style={{ marginTop: 'auto' }}>
+                    ← Explorer les films
                 </Link>
             </div>
 

@@ -942,18 +942,16 @@ body {
   }
 
   to {
+    transform: scale(1);
     opacity: 1;
   }
 }
 
-@keyframes scaleIn {
-  from {
-    transform: scale(0.9);
-    opacity: 0;
-  }
+.sidebar-logo {
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
 
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
+.sidebar-logo:hover {
+  transform: scale(1.05);
 }
