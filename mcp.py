@@ -1,19 +1,28 @@
-# server_mcp_cache_refresh.py
+# server_mcp_movies_and_showtimes.py
 # ------------------------------------------------------------
-# MCP server (FastMCP) that serves movies from a CSV "KB" (cache-first)
-# and falls back to live Playwright scraping on MovieOfTheNight when:
-#  - movie not found locally (search fallback)
-#  - movie details missing or stale (synopsis, cast, year, rating)
+# MCP server unique qui expose 3 tools :
+#   1) search_movie(title, limit=10, include_details=False)
+#   2) get_movie(movie_id)
+#   3) cinefil_showtimes(film_seances_url, city=None, major_cities=True, limit_cinemas_per_city=10)
 #
-# Tools exposed (ONLY 2):
-#   - search_movie(title: str, limit: int = 10) -> list
-#   - get_movie(movie_id: int) -> dict
+# Movies:
+#   - Source principale: CSV (KB)
+#   - Fallback: scraping MovieOfTheNight (SPA) via Playwright
+#   - Refresh: rating (TTL court) + détails (TTL long) + remplissage si manquant
+#
+# Showtimes:
+#   - Source: cinefil.com (/film/<slug>/seances[/<ville>])
+#   - Scraping HTML via httpx + BeautifulSoup
+#   - Cache disque (TTL 2h) par URL
+#   - Sortie groupée par cinéma avec noms (cinemas[].cinema)
+#
+# Install:
+#   pip install mcp pandas playwright httpx beautifulsoup4
+#   playwright install
 #
 # Run:
-#   pip install mcp pandas playwright
-#   playwright install
 #   export MOVIES_CSV_PATH="data/movies_catalog_fr.csv"
-#   python server_mcp_cache_refresh.py
+#   python server_mcp_movies_and_showtimes.py
 # ------------------------------------------------------------
 
 from __future__ import annotations
@@ -22,46 +31,51 @@ import os
 import re
 import json
 import time
+import hashlib
+import unicodedata
 import asyncio
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
+from dataclasses import dataclass
 from datetime import datetime
 from urllib.parse import urlparse, parse_qs
 
 import pandas as pd
-from mcp.server.fastmcp import FastMCP
+import httpx
+from bs4 import BeautifulSoup, Tag
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
 
-# -----------------------------
-# Config
-# -----------------------------
-mcp = FastMCP("hephaestus-movies-cache-refresh")
-
-CSV_PATH = os.getenv("MOVIES_CSV_PATH", "data/movies_catalog_fr.csv")
-BASE_URL = "https://www.movieofthenight.com"
-
-# Freshness
-RATING_TTL_SECONDS = int(os.getenv("RATING_TTL_SECONDS", str(24 * 3600)))           # 24h
-DETAILS_TTL_SECONDS = int(os.getenv("DETAILS_TTL_SECONDS", str(30 * 24 * 3600)))   # 30j (details bougent rarement)
-
-# Simple file lock for CSV writes (proto-safe)
-WRITE_LOCK_PATH = os.getenv("CSV_LOCK_PATH", CSV_PATH + ".lock")
+from mcp.server.fastmcp import FastMCP
 
 
-# -----------------------------
-# Utils
-# -----------------------------
-def now_ts() -> int:
+# ============================================================
+# MCP Server (ONE instance)
+# ============================================================
+mcp = FastMCP("hephaestus-movies-and-showtimes")
+
+
+# ============================================================
+# PART A — MOVIES: CSV KB + MovieOfTheNight fallback
+# ============================================================
+MOVIES_CSV_PATH = os.getenv("MOVIES_CSV_PATH", "data/movies_catalog_fr.csv")
+MOTN_BASE_URL = "https://www.movieofthenight.com"
+
+MOVIES_RATING_TTL_SECONDS = int(os.getenv("RATING_TTL_SECONDS", str(24 * 3600)))          # 24h
+MOVIES_DETAILS_TTL_SECONDS = int(os.getenv("DETAILS_TTL_SECONDS", str(30 * 24 * 3600)))  # 30j
+MOVIES_WRITE_LOCK_PATH = os.getenv("CSV_LOCK_PATH", MOVIES_CSV_PATH + ".lock")
+
+
+def _now_ts() -> int:
     return int(time.time())
 
 
-def normalize_text(s: Any) -> str:
+def _normalize_text(s: Any) -> str:
     s = "" if s is None else str(s)
     s = s.strip().lower()
     s = re.sub(r"\s+", " ", s)
     return s
 
 
-def safe_int(x: Any) -> Optional[int]:
+def _safe_int(x: Any) -> Optional[int]:
     try:
         if pd.isna(x):
             return None
@@ -70,7 +84,7 @@ def safe_int(x: Any) -> Optional[int]:
         return None
 
 
-def safe_float(x: Any) -> Optional[float]:
+def _safe_float(x: Any) -> Optional[float]:
     try:
         if pd.isna(x):
             return None
@@ -79,7 +93,7 @@ def safe_float(x: Any) -> Optional[float]:
         return None
 
 
-def safe_str(x: Any) -> Optional[str]:
+def _safe_str(x: Any) -> Optional[str]:
     if x is None:
         return None
     try:
@@ -91,14 +105,14 @@ def safe_str(x: Any) -> Optional[str]:
     return s if s else None
 
 
-def pick_col(df: pd.DataFrame, candidates: List[str]) -> Optional[str]:
+def _pick_col(df: pd.DataFrame, candidates: List[str]) -> Optional[str]:
     for c in candidates:
         if c in df.columns:
             return c
     return None
 
 
-def parse_ts(value: Any) -> Optional[int]:
+def _parse_ts(value: Any) -> Optional[int]:
     if value is None:
         return None
     try:
@@ -106,37 +120,26 @@ def parse_ts(value: Any) -> Optional[int]:
             return None
     except Exception:
         pass
-
-    # unix int/float as str
     try:
         return int(float(value))
     except Exception:
         pass
-
-    # ISO
     try:
         return int(datetime.fromisoformat(str(value)).timestamp())
     except Exception:
         return None
 
 
-def ensure_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Adds required columns if missing (without breaking existing CSV).
-    """
+def _ensure_movie_columns(df: pd.DataFrame) -> pd.DataFrame:
     required = {
         "motn_url": None,
-
-        # Details
         "summary": None,
-        "starring": None,  # store as a string: "Actor A, Actor B, ..."
+        "starring": None,
         "director": None,
         "year": None,
-
-        # Rating & freshness
         "rating": None,
-        "rating_last_updated_at": None,   # unix ts
-        "details_last_updated_at": None,  # unix ts
+        "rating_last_updated_at": None,
+        "details_last_updated_at": None,
     }
     for col, default in required.items():
         if col not in df.columns:
@@ -144,7 +147,7 @@ def ensure_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def acquire_file_lock(lock_path: str, timeout: int = 10) -> None:
+def _acquire_file_lock(lock_path: str, timeout: int = 10) -> None:
     start = time.time()
     while True:
         try:
@@ -157,51 +160,47 @@ def acquire_file_lock(lock_path: str, timeout: int = 10) -> None:
             time.sleep(0.05)
 
 
-def release_file_lock(lock_path: str) -> None:
+def _release_file_lock(lock_path: str) -> None:
     try:
         os.remove(lock_path)
     except FileNotFoundError:
         pass
 
 
-def atomic_write_csv(df: pd.DataFrame, path: str) -> None:
+def _atomic_write_csv(df: pd.DataFrame, path: str) -> None:
     tmp = path + ".tmp"
     df.to_csv(tmp, index=False)
     os.replace(tmp, path)
 
 
-# -----------------------------
-# Global CSV store (KB)
-# -----------------------------
-if not os.path.exists(CSV_PATH):
-    raise FileNotFoundError(f"CSV not found: {CSV_PATH}")
+# ---- Load movies KB (CSV)
+if not os.path.exists(MOVIES_CSV_PATH):
+    raise FileNotFoundError(f"Movies CSV not found: {MOVIES_CSV_PATH}")
 
-DF = pd.read_csv(CSV_PATH)
-DF = ensure_columns(DF)
+MOVIES_DF = pd.read_csv(MOVIES_CSV_PATH)
+MOVIES_DF = _ensure_movie_columns(MOVIES_DF)
 
-COL_ID = pick_col(DF, ["show_id", "id", "movie_id", "ID", "internal_id"])
-COL_TITLE = pick_col(DF, ["title", "Titre", "name", "Name"])
-COL_YEAR_LEGACY = pick_col(DF, ["year", "Year", "annee", "Année"])  # if your CSV already had a year column
+MOV_COL_ID = _pick_col(MOVIES_DF, ["show_id", "id", "movie_id", "ID", "internal_id"])
+MOV_COL_TITLE = _pick_col(MOVIES_DF, ["title", "Titre", "name", "Name"])
+MOV_COL_YEAR_LEGACY = _pick_col(MOVIES_DF, ["year", "Year", "annee", "Année"])
 
-if COL_TITLE is None:
-    raise ValueError("No title column found in CSV (expected title/Titre/name/Name).")
+if MOV_COL_TITLE is None:
+    raise ValueError("No title column found in movies CSV (expected title/Titre/name/Name).")
 
-if "_title_norm" not in DF.columns:
-    DF["_title_norm"] = DF[COL_TITLE].astype(str).map(normalize_text)
+if "_title_norm" not in MOVIES_DF.columns:
+    MOVIES_DF["_title_norm"] = MOVIES_DF[MOV_COL_TITLE].astype(str).map(_normalize_text)
 
 
-def persist_df() -> None:
-    global DF
-    acquire_file_lock(WRITE_LOCK_PATH)
+def _persist_movies_df() -> None:
+    global MOVIES_DF
+    _acquire_file_lock(MOVIES_WRITE_LOCK_PATH)
     try:
-        atomic_write_csv(DF, CSV_PATH)
+        _atomic_write_csv(MOVIES_DF, MOVIES_CSV_PATH)
     finally:
-        release_file_lock(WRITE_LOCK_PATH)
+        _release_file_lock(MOVIES_WRITE_LOCK_PATH)
 
 
-# -----------------------------
-# Scraping helpers
-# -----------------------------
+# ---- MovieOfTheNight scraping helpers
 def _extract_id_from_motn_url(motn_url: str) -> Optional[str]:
     try:
         u = urlparse(motn_url)
@@ -259,9 +258,6 @@ def _dedup_join(names: List[str]) -> Optional[str]:
 
 
 def _parse_ld_json(ld_obj: Any) -> Dict[str, Any]:
-    """
-    Normalize JSON-LD (schema.org) blocks into our fields.
-    """
     out: Dict[str, Any] = {}
 
     if isinstance(ld_obj, list):
@@ -299,29 +295,31 @@ def _parse_ld_json(ld_obj: Any) -> Dict[str, Any]:
         n = _first_str(actors.get("name"))
         if n:
             cast_names.append(n)
-    out_cast = _dedup_join(cast_names)
-    if out_cast:
-        out["starring"] = out_cast
+
+    cast_out = _dedup_join(cast_names)
+    if cast_out:
+        out["starring"] = cast_out
 
     director = ld_obj.get("director")
-    directors: List[str] = []
+    dir_names: List[str] = []
     if isinstance(director, list):
         for d in director:
             if isinstance(d, dict):
                 n = _first_str(d.get("name"))
                 if n:
-                    directors.append(n)
+                    dir_names.append(n)
             elif isinstance(d, str) and d.strip():
-                directors.append(d.strip())
+                dir_names.append(d.strip())
     elif isinstance(director, dict):
         n = _first_str(director.get("name"))
         if n:
-            directors.append(n)
+            dir_names.append(n)
     elif isinstance(director, str) and director.strip():
-        directors.append(director.strip())
-    out_dir = _dedup_join(directors)
-    if out_dir:
-        out["director"] = out_dir
+        dir_names.append(director.strip())
+
+    dir_out = _dedup_join(dir_names)
+    if dir_out:
+        out["director"] = dir_out
 
     agg = ld_obj.get("aggregateRating") or {}
     if isinstance(agg, dict):
@@ -334,7 +332,6 @@ def _parse_ld_json(ld_obj: Any) -> Dict[str, Any]:
 
 
 def _walk_dicts(obj: Any) -> List[dict]:
-    """Collect all dicts from nested JSON payload."""
     found: List[dict] = []
     if isinstance(obj, dict):
         found.append(obj)
@@ -347,21 +344,12 @@ def _walk_dicts(obj: Any) -> List[dict]:
 
 
 def _extract_from_candidate_dict(c: dict) -> Dict[str, Any]:
-    """
-    Try to map a candidate dict (from captured JSON) to our fields.
-    """
     out: Dict[str, Any] = {}
 
-    # summary
     out["summary"] = _first_str(c.get("summary") or c.get("description") or c.get("synopsis"))
-
-    # year
     out["year"] = _coerce_year(c.get("year") or c.get("releaseYear") or c.get("datePublished"))
-
-    # rating
     out["rating"] = _coerce_rating(c.get("rating") or c.get("score") or c.get("ratingValue"))
 
-    # starring / cast / actors
     cast = c.get("starring") or c.get("cast") or c.get("actors")
     cast_names: List[str] = []
     if isinstance(cast, list):
@@ -377,13 +365,11 @@ def _extract_from_candidate_dict(c: dict) -> Dict[str, Any]:
         if n:
             cast_names.append(n)
     elif isinstance(cast, str) and cast.strip():
-        # might already be "A, B, C"
         cast_names.append(cast.strip())
-    out_cast = _dedup_join(cast_names)
-    if out_cast:
-        out["starring"] = out_cast
+    cast_out = _dedup_join(cast_names)
+    if cast_out:
+        out["starring"] = cast_out
 
-    # director
     d = c.get("director")
     dir_names: List[str] = []
     if isinstance(d, list):
@@ -400,36 +386,26 @@ def _extract_from_candidate_dict(c: dict) -> Dict[str, Any]:
             dir_names.append(n)
     elif isinstance(d, str) and d.strip():
         dir_names.append(d.strip())
-    out_dir = _dedup_join(dir_names)
-    if out_dir:
-        out["director"] = out_dir
 
-    # Remove empties
+    dir_out = _dedup_join(dir_names)
+    if dir_out:
+        out["director"] = dir_out
+
     return {k: v for k, v in out.items() if v is not None}
 
 
-# -----------------------------
-# Scraping (Playwright)
-# -----------------------------
+# ---- MOTN scraping
 async def scrape_search_motn(query: str, limit: int = 10) -> List[Dict[str, Any]]:
-    """
-    Search a title on MovieOfTheNight (SPA). Generic approach:
-      - open /browse
-      - fill first input
-      - collect show links
-    NOTE: If you already have stable selectors from your old scraper, plug them here.
-    """
     q = query.strip()
     if not q:
         return []
 
     results: List[Dict[str, Any]] = []
-
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         page = await browser.new_page()
         try:
-            await page.goto(f"{BASE_URL}/browse", wait_until="domcontentloaded")
+            await page.goto(f"{MOTN_BASE_URL}/browse", wait_until="domcontentloaded")
             await page.wait_for_timeout(800)
 
             inputs = await page.query_selector_all("input")
@@ -442,19 +418,15 @@ async def scrape_search_motn(query: str, limit: int = 10) -> List[Dict[str, Any]
                 href = (await a.get_attribute("href")) or ""
                 if "/show" not in href and "/shows" not in href:
                     continue
-
-                full_url = href if href.startswith("http") else (BASE_URL + href)
+                full_url = href if href.startswith("http") else (MOTN_BASE_URL + href)
                 text = ((await a.inner_text()) or "").strip()
-                title_guess = text if text else None
-
-                results.append({"title": title_guess, "motn_url": full_url})
+                results.append({"title": text if text else None, "motn_url": full_url})
 
         except PlaywrightTimeoutError:
             pass
         finally:
             await browser.close()
 
-    # dedup by URL
     seen = set()
     dedup = []
     for r in results:
@@ -466,13 +438,6 @@ async def scrape_search_motn(query: str, limit: int = 10) -> List[Dict[str, Any]
 
 
 async def scrape_details_from_show_page(motn_url: str) -> Dict[str, Any]:
-    """
-    Robust details scraping for a MOTN show page (SPA):
-      1) JSON-LD (script[type="application/ld+json"])
-      2) Capture JSON XHR responses during load and parse nested dict candidates
-      3) Fallback to meta description if summary missing
-    Returns: summary, starring, director, year, rating
-    """
     if not motn_url:
         return {}
 
@@ -497,7 +462,6 @@ async def scrape_details_from_show_page(motn_url: str) -> Dict[str, Any]:
 
         try:
             await page.goto(motn_url, wait_until="domcontentloaded")
-            # let XHR settle
             await page.wait_for_timeout(2000)
 
             out: Dict[str, Any] = {}
@@ -506,8 +470,7 @@ async def scrape_details_from_show_page(motn_url: str) -> Dict[str, Any]:
             try:
                 ld_scripts = await page.query_selector_all('script[type="application/ld+json"]')
                 for s in ld_scripts:
-                    raw = (await s.inner_text()) or ""
-                    raw = raw.strip()
+                    raw = ((await s.inner_text()) or "").strip()
                     if not raw:
                         continue
                     try:
@@ -521,7 +484,7 @@ async def scrape_details_from_show_page(motn_url: str) -> Dict[str, Any]:
             except Exception:
                 pass
 
-            # (2) XHR JSON payloads
+            # (2) XHR payloads
             candidates: List[dict] = []
             for payload in captured_payloads:
                 candidates.extend(_walk_dicts(payload))
@@ -530,13 +493,9 @@ async def scrape_details_from_show_page(motn_url: str) -> Dict[str, Any]:
             for c in candidates:
                 if not isinstance(c, dict):
                     continue
-
-                # match by id if possible
                 if show_id and (str(c.get("id")) == str(show_id) or str(c.get("show_id")) == str(show_id)):
                     best = c
                     break
-
-                # heuristic: looks like a show object
                 keys = set(c.keys())
                 if ("summary" in keys or "synopsis" in keys or "description" in keys) and ("title" in keys or "name" in keys):
                     best = c
@@ -547,7 +506,7 @@ async def scrape_details_from_show_page(motn_url: str) -> Dict[str, Any]:
                     if v is not None and not out.get(k):
                         out[k] = v
 
-            # (3) fallback meta description for summary
+            # (3) meta description fallback
             if not out.get("summary"):
                 try:
                     md = await page.query_selector('meta[name="description"]')
@@ -564,65 +523,75 @@ async def scrape_details_from_show_page(motn_url: str) -> Dict[str, Any]:
             await browser.close()
 
 
-# -----------------------------
-# MCP Tools (2 tools only)
-# -----------------------------
+# ---- Movies tools (UPDATED: include_details option)
 @mcp.tool()
-def search_movie(title: str, limit: int = 10) -> List[Dict[str, Any]]:
+def search_movie(title: str, limit: int = 10, include_details: bool = False) -> List[Dict[str, Any]]:
     """
-    Cache-first:
-      1) search in CSV
-      2) if none -> scrape MOTN search, add minimal rows to CSV (title + motn_url + id), return
+    Cache-first movie search:
+      1) Search in CSV KB
+      2) If none: scrape MOTN search, add minimal rows (title + motn_url + internal_id if needed)
+    If include_details=True, includes summary/starring/director/rating FROM CSV ONLY (no scraping here).
     """
-    global DF
+    global MOVIES_DF, MOV_COL_ID
 
-    q = normalize_text(title)
+    q = _normalize_text(title)
     if not q:
         return []
 
-    # 1) Local
-    hits = DF[DF["_title_norm"].str.contains(re.escape(q), na=False)].copy()
+    def _row_to_out(row: pd.Series) -> Dict[str, Any]:
+        base = {
+            "id": _safe_int(row.get(MOV_COL_ID)) if MOV_COL_ID else _safe_int(row.get("internal_id")),
+            "title": _safe_str(row.get(MOV_COL_TITLE)),
+            "year": _safe_int(row.get("year")) or (_safe_int(row.get(MOV_COL_YEAR_LEGACY)) if MOV_COL_YEAR_LEGACY else None),
+            "motn_url": _safe_str(row.get("motn_url")),
+        }
+        if include_details:
+            base.update({
+                "summary": _safe_str(row.get("summary")),
+                "starring": _safe_str(row.get("starring")),
+                "director": _safe_str(row.get("director")),
+                "rating": _safe_float(row.get("rating")),
+            })
+        return base
+
+    # 1) local search
+    hits = MOVIES_DF[MOVIES_DF["_title_norm"].str.contains(re.escape(q), na=False)].copy()
     if not hits.empty:
         out = []
         for _, row in hits.head(max(1, int(limit))).iterrows():
-            out.append({
-                "id": safe_int(row.get(COL_ID)) if COL_ID else safe_int(row.get("internal_id")),
-                "title": safe_str(row.get(COL_TITLE)),
-                "year": safe_int(row.get("year")) or (safe_int(row.get(COL_YEAR_LEGACY)) if COL_YEAR_LEGACY else None),
-                "motn_url": safe_str(row.get("motn_url")),
-            })
+            out.append(_row_to_out(row))
         return out
 
-    # 2) Fallback web search
+    # 2) fallback scraping
     scraped = asyncio.run(scrape_search_motn(title, limit=limit))
     if not scraped:
         return []
 
-    # Ensure a local id column
-    if COL_ID is None or COL_ID not in DF.columns:
-        if "internal_id" not in DF.columns:
-            DF["internal_id"] = range(1, len(DF) + 1)
+    # ensure an ID column
+    if MOV_COL_ID is None or MOV_COL_ID not in MOVIES_DF.columns:
+        if "internal_id" not in MOVIES_DF.columns:
+            MOVIES_DF["internal_id"] = range(1, len(MOVIES_DF) + 1)
         id_col = "internal_id"
+        MOV_COL_ID = "internal_id"
     else:
-        id_col = COL_ID
+        id_col = MOV_COL_ID
 
-    next_id = int(DF[id_col].max()) + 1 if len(DF) and DF[id_col].notna().any() else 1
+    next_id = int(MOVIES_DF[id_col].max()) + 1 if len(MOVIES_DF) and MOVIES_DF[id_col].notna().any() else 1
 
     new_rows = []
     for r in scraped:
         new_title = r.get("title") or title
         new_url = r.get("motn_url")
 
-        if new_url and (DF["motn_url"] == new_url).any():
+        if new_url and (MOVIES_DF["motn_url"] == new_url).any():
             continue
 
-        row = {c: None for c in DF.columns}
-        row[COL_TITLE] = new_title
-        row["_title_norm"] = normalize_text(new_title)
+        row = {c: None for c in MOVIES_DF.columns}
+        row[MOV_COL_TITLE] = new_title
+        row["_title_norm"] = _normalize_text(new_title)
         row["motn_url"] = new_url
         row[id_col] = next_id
 
-        # leave details empty (filled by get_movie)
         row["summary"] = None
         row["starring"] = None
         row["director"] = None
@@ -635,83 +604,73 @@ def search_movie(title: str, limit: int = 10) -> List[Dict[str, Any]]:
         new_rows.append(row)
 
     if new_rows:
-        DF = pd.concat([DF, pd.DataFrame(new_rows)], ignore_index=True)
-        persist_df()
+        MOVIES_DF = pd.concat([MOVIES_DF, pd.DataFrame(new_rows)], ignore_index=True)
+        _persist_movies_df()
 
-    # return local now
-    hits2 = DF[DF["_title_norm"].str.contains(re.escape(q), na=False)].copy()
+    # return now
+    hits2 = MOVIES_DF[MOVIES_DF["_title_norm"].str.contains(re.escape(q), na=False)].copy()
     out = []
     for _, row in hits2.head(max(1, int(limit))).iterrows():
-        out.append({
-            "id": safe_int(row.get(COL_ID)) if COL_ID else safe_int(row.get("internal_id")),
-            "title": safe_str(row.get(COL_TITLE)),
-            "year": safe_int(row.get("year")) or (safe_int(row.get(COL_YEAR_LEGACY)) if COL_YEAR_LEGACY else None),
-            "motn_url": safe_str(row.get("motn_url")),
-        })
+        out.append(_row_to_out(row))
     return out
 
 
 @mcp.tool()
 def get_movie(movie_id: int) -> Dict[str, Any]:
     """
-    Returns a movie from the CSV.
-    If missing/stale fields, scrapes the show page ONCE and updates:
+    Returns a movie from CSV KB.
+    If missing/stale: scrapes MOTN show page ONCE and updates:
       - summary (synopsis)
-      - starring (cast list)
+      - starring (cast)
       - director
       - year
-      - rating (with TTL)
+      - rating
     """
-    global DF
+    global MOVIES_DF
 
     if movie_id is None:
         return {"found": False, "error": "movie_id is required"}
 
-    # Determine ID column
-    if COL_ID and COL_ID in DF.columns:
-        id_col = COL_ID
-    elif "internal_id" in DF.columns:
+    if MOV_COL_ID and MOV_COL_ID in MOVIES_DF.columns:
+        id_col = MOV_COL_ID
+    elif "internal_id" in MOVIES_DF.columns:
         id_col = "internal_id"
     else:
-        return {"found": False, "error": "No id column in CSV"}
+        return {"found": False, "error": "No id column in movies CSV"}
 
-    rows = DF.loc[DF[id_col] == movie_id]
+    rows = MOVIES_DF.loc[MOVIES_DF[id_col] == movie_id]
     if rows.empty:
         return {"found": False, "movie_id": movie_id}
 
     idx = rows.index[0]
-    row = DF.loc[idx]
+    row = MOVIES_DF.loc[idx]
 
-    motn_url = safe_str(row.get("motn_url"))
+    motn_url = _safe_str(row.get("motn_url"))
 
-    # Freshness
-    rating_last = parse_ts(row.get("rating_last_updated_at"))
-    details_last = parse_ts(row.get("details_last_updated_at"))
+    rating_last = _parse_ts(row.get("rating_last_updated_at"))
+    details_last = _parse_ts(row.get("details_last_updated_at"))
 
-    rating_stale = (rating_last is None) or (now_ts() - rating_last > RATING_TTL_SECONDS)
-    details_stale = (details_last is None) or (now_ts() - details_last > DETAILS_TTL_SECONDS)
+    rating_stale = (rating_last is None) or (_now_ts() - rating_last > MOVIES_RATING_TTL_SECONDS)
+    details_stale = (details_last is None) or (_now_ts() - details_last > MOVIES_DETAILS_TTL_SECONDS)
 
-    # Missing fields?
-    missing_summary = safe_str(row.get("summary")) is None
-    missing_starring = safe_str(row.get("starring")) is None
-    missing_director = safe_str(row.get("director")) is None
-    missing_year = safe_int(row.get("year")) is None
+    missing_summary = _safe_str(row.get("summary")) is None
+    missing_starring = _safe_str(row.get("starring")) is None
+    missing_director = _safe_str(row.get("director")) is None
+    missing_year = _safe_int(row.get("year")) is None
 
     need_details = bool(motn_url) and (details_stale or missing_summary or missing_starring or missing_director or missing_year)
     need_rating = bool(motn_url) and rating_stale
 
-    refreshed_details = False
-    refreshed_rating = False
+    details_refreshed = False
+    rating_refreshed = False
 
-    # Scrape ONCE if needed
     if motn_url and (need_details or need_rating):
-        scraped = {}
+        scraped: Dict[str, Any] = {}
         try:
             scraped = asyncio.run(scrape_details_from_show_page(motn_url))
         except Exception:
             scraped = {}
 
-        # Update details
         if need_details and scraped:
             y = scraped.get("year")
             s = scraped.get("summary")
@@ -719,52 +678,320 @@ def get_movie(movie_id: int) -> Dict[str, Any]:
             d = scraped.get("director")
 
             if y is not None:
-                DF.at[idx, "year"] = int(y)
+                MOVIES_DF.at[idx, "year"] = int(y)
             if s:
-                DF.at[idx, "summary"] = s
+                MOVIES_DF.at[idx, "summary"] = s
             if cast:
-                DF.at[idx, "starring"] = cast
+                MOVIES_DF.at[idx, "starring"] = cast
             if d:
-                DF.at[idx, "director"] = d
+                MOVIES_DF.at[idx, "director"] = d
 
-            DF.at[idx, "details_last_updated_at"] = now_ts()
-            refreshed_details = True
+            MOVIES_DF.at[idx, "details_last_updated_at"] = _now_ts()
+            details_refreshed = True
 
-        # Update rating (only if stale)
         if need_rating and scraped:
             r = scraped.get("rating")
             if r is not None:
-                DF.at[idx, "rating"] = float(r)
-                DF.at[idx, "rating_last_updated_at"] = now_ts()
-                refreshed_rating = True
+                MOVIES_DF.at[idx, "rating"] = float(r)
+                MOVIES_DF.at[idx, "rating_last_updated_at"] = _now_ts()
+                rating_refreshed = True
 
-        if refreshed_details or refreshed_rating:
-            persist_df()
+        if details_refreshed or rating_refreshed:
+            _persist_movies_df()
 
-    # Return latest row
-    row2 = DF.loc[idx]
+    row2 = MOVIES_DF.loc[idx]
     return {
         "found": True,
-        "id": safe_int(row2.get(id_col)),
-        "title": safe_str(row2.get(COL_TITLE)),
-        "year": safe_int(row2.get("year")) or (safe_int(row2.get(COL_YEAR_LEGACY)) if COL_YEAR_LEGACY else None),
-        "summary": safe_str(row2.get("summary")),
-        "starring": safe_str(row2.get("starring")),
-        "director": safe_str(row2.get("director")),
-        "motn_url": safe_str(row2.get("motn_url")),
-        "rating": safe_float(row2.get("rating")),
+        "id": _safe_int(row2.get(id_col)),
+        "title": _safe_str(row2.get(MOV_COL_TITLE)),
+        "year": _safe_int(row2.get("year")) or (_safe_int(row2.get(MOV_COL_YEAR_LEGACY)) if MOV_COL_YEAR_LEGACY else None),
+        "summary": _safe_str(row2.get("summary")),
+        "starring": _safe_str(row2.get("starring")),
+        "director": _safe_str(row2.get("director")),
+        "motn_url": _safe_str(row2.get("motn_url")),
+        "rating": _safe_float(row2.get("rating")),
         "rating_last_updated_at": row2.get("rating_last_updated_at"),
         "details_last_updated_at": row2.get("details_last_updated_at"),
-        "details_refreshed": refreshed_details,
-        "rating_refreshed": refreshed_rating,
+        "details_refreshed": details_refreshed,
+        "rating_refreshed": rating_refreshed,
     }
 
 
-# -----------------------------
+# ============================================================
+# PART B — CINEFIL SHOWTIMES (robust cinema names + grouped output)
+# ============================================================
+CINEFIL_CACHE_DIR = os.getenv("CINEFIL_SHOWTIMES_CACHE_DIR", "data/cinefil_showtimes_cache")
+CINEFIL_CACHE_TTL_SECONDS = int(os.getenv("CINEFIL_SHOWTIMES_TTL_SECONDS", str(2 * 3600)))  # 2h
+CINEFIL_MAJOR_CITIES = ["Paris", "Marseille", "Lyon", "Bordeaux", "Lille"]
+
+CINEFIL_DAY_RE = re.compile(r"\b(Lun\.|Mar\.|Mer\.|Jeu\.|Ven\.|Sam\.|Dim\.)\s*(\d{1,2})\b")
+CINEFIL_TIME_RE = re.compile(r"\b(\d{1,2}:\d{2})\b")
+CINEFIL_LANG_RE = re.compile(r"^(VF|VOSTFR|VO|VOST|3D|IMAX)$", re.IGNORECASE)
+
+
+def _ensure_dir(path: str) -> None:
+    os.makedirs(path, exist_ok=True)
+
+
+def _slugify_city(s: str) -> str:
+    s = s.strip().lower()
+    s = unicodedata.normalize("NFKD", s)
+    s = "".join(ch for ch in s if not unicodedata.combining(ch))
+    s = re.sub(r"[^a-z0-9\s-]", "", s)
+    s = re.sub(r"\s+", "-", s).strip("-")
+    return s
+
+
+def _cinefil_cache_key(url: str) -> str:
+    return hashlib.sha256(url.encode("utf-8")).hexdigest()
+
+
+def _cinefil_cache_path(key: str) -> str:
+    return os.path.join(CINEFIL_CACHE_DIR, f"{key}.json")
+
+
+def _cinefil_load_cache(url: str) -> Optional[Dict[str, Any]]:
+    key = _cinefil_cache_key(url)
+    path = _cinefil_cache_path(key)
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            payload = json.load(f)
+        if _now_ts() - int(payload.get("_cached_at", 0)) > CINEFIL_CACHE_TTL_SECONDS:
+            return None
+        return payload
+    except Exception:
+        return None
+
+
+def _cinefil_save_cache(url: str, payload: Dict[str, Any]) -> None:
+    _ensure_dir(CINEFIL_CACHE_DIR)
+    payload["_cached_at"] = _now_ts()
+    with open(_cinefil_cache_path(_cinefil_cache_key(url)), "w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, indent=2)
+
+
+def _cinefil_build_city_url(film_seances_url: str, city: str) -> str:
+    base = film_seances_url.rstrip("/")
+    if city.strip().lower() == "paris":
+        return base
+    return f"{base}/{_slugify_city(city)}?og_search=1"
+
+
+def _cinefil_clean_text(s: str) -> str:
+    s = (s or "").strip()
+    s = re.sub(r"\s+", " ", s)
+    return s
+
+
+def _cinefil_get_heading_text(h: Tag) -> str:
+    if h is None:
+        return ""
+    a = h.find("a")
+    if a:
+        t = _cinefil_clean_text(a.get_text(" ", strip=True))
+        if t:
+            return t
+    return _cinefil_clean_text(h.get_text(" ", strip=True))
+
+
+def _cinefil_extract_city_from_page(soup: BeautifulSoup) -> str:
+    for h2 in soup.find_all(["h2", "h3"]):
+        txt = h2.get_text(" ", strip=True)
+        m = re.search(r"Les séances à\s+(.+)", txt)
+        if m:
+            return m.group(1).strip()
+    return "Unknown"
+
+
+def _cinefil_iter_cinema_headings(soup: BeautifulSoup) -> List[Tag]:
+    anchor = None
+    for h2 in soup.find_all(["h2", "h3"]):
+        if "Les séances à" in h2.get_text(" ", strip=True):
+            anchor = h2
+            break
+    if not anchor:
+        return soup.find_all(["h3", "h4"])
+
+    nodes: List[Tag] = []
+    cur = anchor.next_sibling
+    while cur:
+        if isinstance(cur, Tag):
+            txt = cur.get_text(" ", strip=True)
+            if txt.startswith("Séances à proximité") or txt.startswith("Autres villes"):
+                break
+            nodes.append(cur)
+        cur = cur.next_sibling
+
+    headings: List[Tag] = []
+    for n in nodes:
+        headings.extend(n.find_all(["h3", "h4"]))
+    return headings
+
+
+def _cinefil_collect_block_lines_from_heading(h: Tag) -> List[str]:
+    lines: List[str] = []
+    cur = h
+    while cur:
+        if isinstance(cur, Tag):
+            if cur is not h and cur.name in ("h3", "h4"):
+                break
+            t = cur.get_text("\n", strip=True)
+            if t:
+                for l in t.split("\n"):
+                    ll = l.strip()
+                    if ll:
+                        lines.append(ll)
+        cur = cur.next_sibling
+    return lines
+
+
+def _cinefil_parse_days_and_rows(block_text_lines: List[str]) -> Tuple[List[str], List[List[Dict[str, Optional[str]]]]]:
+    day_line_idx = None
+    for i, line in enumerate(block_text_lines):
+        if len(CINEFIL_DAY_RE.findall(line)) >= 2:
+            day_line_idx = i
+            break
+    if day_line_idx is None:
+        return [], []
+
+    days = [f"{d} {n}" for (d, n) in CINEFIL_DAY_RE.findall(block_text_lines[day_line_idx])]
+
+    rows: List[List[Dict[str, Optional[str]]]] = []
+    cursor = day_line_idx + 1
+    candidates: List[str] = []
+
+    while cursor < len(block_text_lines) and len(candidates) < len(days):
+        l = block_text_lines[cursor].strip()
+        cursor += 1
+        if not l:
+            continue
+        if "Voir les tarifs" in l:
+            continue
+        candidates.append(l)
+
+    for line in candidates:
+        parts = line.split()
+        out: List[Dict[str, Optional[str]]] = []
+        j = 0
+        while j < len(parts):
+            p = parts[j]
+            if CINEFIL_TIME_RE.match(p):
+                tag = None
+                if j + 1 < len(parts) and CINEFIL_LANG_RE.match(parts[j + 1]):
+                    tag = parts[j + 1].upper()
+                    j += 1
+                out.append({"time": p, "tag": tag})
+            j += 1
+
+        if "Aucune" in line and "séance" in line and not out:
+            rows.append([])
+        else:
+            rows.append(out)
+
+    if len(rows) != len(days):
+        return days, [r for r in rows]
+    return days, rows
+
+
+async def _cinefil_fetch_html(url: str) -> str:
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121 Safari/537.36",
+        "Accept-Language": "fr-FR,fr;q=0.9",
+    }
+    async with httpx.AsyncClient(timeout=30.0, follow_redirects=True, headers=headers) as client:
+        r = await client.get(url)
+        r.raise_for_status()
+        return r.text
+
+
+async def _cinefil_scrape_city(film_seances_url: str, city: str, limit_cinemas: int = 10) -> Dict[str, Any]:
+    url = _cinefil_build_city_url(film_seances_url, city)
+
+    cached = _cinefil_load_cache(url)
+    if cached:
+        return cached
+
+    html = await _cinefil_fetch_html(url)
+    soup = BeautifulSoup(html, "html.parser")
+
+    film_title = (soup.find("h1").get_text(" ", strip=True) if soup.find("h1") else None)
+    page_city = _cinefil_extract_city_from_page(soup)
+    city_label = page_city if page_city != "Unknown" else city
+
+    headings = _cinefil_iter_cinema_headings(soup)
+
+    cinemas_out: List[Dict[str, Any]] = []
+    used = 0
+
+    for h in headings:
+        if used >= max(1, limit_cinemas):
+            break
+
+        cinema_name = _cinefil_get_heading_text(h)
+        if not cinema_name or cinema_name.lower().startswith("séances"):
+            continue
+
+        lines = _cinefil_collect_block_lines_from_heading(h)
+        days, rows = _cinefil_parse_days_and_rows(lines)
+        if not days:
+            continue
+
+        day_items = []
+        for idx, day_label in enumerate(days):
+            times = rows[idx] if idx < len(rows) else []
+            day_items.append({"day_label": day_label, "times": times})
+
+        cinemas_out.append({"city": city_label, "cinema": cinema_name, "days": day_items})
+        used += 1
+
+    payload = {
+        "source": "cinefil.com",
+        "film_title": film_title,
+        "city": city_label,
+        "source_url": url,
+        "cinemas": cinemas_out,
+    }
+    _cinefil_save_cache(url, payload)
+    return payload
+
+
+@mcp.tool()
+def cinefil_showtimes(
+    film_seances_url: str,
+    city: Optional[str] = None,
+    major_cities: bool = True,
+    limit_cinemas_per_city: int = 10
+) -> Dict[str, Any]:
+    if not film_seances_url.startswith("http"):
+        return {"error": "film_seances_url must be a full URL (https://...)"}
+
+    async def _run() -> Dict[str, Any]:
+        cities = [city] if city else (CINEFIL_MAJOR_CITIES if major_cities else ["Paris"])
+        out: Dict[str, Any] = {
+            "film_seances_url": film_seances_url,
+            "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+            "cities": [],
+        }
+
+        for c in cities:
+            res = await _cinefil_scrape_city(
+                film_seances_url=film_seances_url,
+                city=c,
+                limit_cinemas=limit_cinemas_per_city,
+            )
+            out["cities"].append(res)
+
+        return out
+
+    return asyncio.run(_run())
+
+
+# ============================================================
 # Main
-# -----------------------------
+# ============================================================
 if __name__ == "__main__":
-    print(f"[OK] Loaded CSV: {CSV_PATH} | rows={len(DF)}")
-    print(f"[OK] TTL rating={RATING_TTL_SECONDS}s | details={DETAILS_TTL_SECONDS}s")
-    print("[OK] MCP tools: search_movie, get_movie")
+    print(f"[OK] Movies CSV: {MOVIES_CSV_PATH} | rows={len(MOVIES_DF)}")
+    print("[OK] MCP tools: search_movie, get_movie, cinefil_showtimes")
     mcp.run()
