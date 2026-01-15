@@ -1,6 +1,6 @@
 import ollama
 
-# --- PROMPT SPÉCIALISÉ POUR LE ROUTAGE (Step 1) ---
+# Prompt pour le routeur
 ROUTER_SYSTEM_PROMPT = """
 Tu es un automate. Si l'utilisateur parle d'un film, réponds UNIQUEMENT avec ce JSON :
 {"action": "get_movie_data", "parameters": {"title": "NOM DU FILM"}}
@@ -23,7 +23,7 @@ class LLMService:
             response = ollama.chat(model=self.model, messages=[
                 {'role': 'system', 'content': active_system_prompt},
                 {'role': 'user', 'content': user_prompt},
-            ], options={'temperature': 0.1}) # Température basse pour la précision du JSON
+            ], options={'temperature': 0.1}) # Température basse pour la précision du JSON pour s'assurer de proposer une réponse tout de même
             
             return response['message']['content']
         except Exception as e:

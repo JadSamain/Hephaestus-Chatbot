@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Dict, Any
 
-# Importe ton service LLM existant
+# Import du LLM
 from app.services.llm_service import llm_service
 # Import du MCP
 from . import mcp as mcp_tools
@@ -22,12 +22,10 @@ class ToolCall(BaseModel):
 async def ask_hephaestus(request: ChatRequest):
     user_prompt = request.prompt
     
-    # --- ÉTAPE 1 : ROUTING (LLM Décide) ---
     # Le LLM décide s'il faut chercher un film
     raw_response = await llm_service.generate_response(user_prompt)
     print(f"[DEBUG LLM] Réponse brute : {raw_response}")
     
-    # --- ÉTAPE 2 : DÉTECTION D'OUTIL ---
     # On cherche le pattern JSON strict
     json_match = re.search(r'\{.*\}', raw_response, re.DOTALL)
     if json_match:
@@ -43,9 +41,6 @@ async def ask_hephaestus(request: ChatRequest):
                 movie_title = tool_request.parameters.get("title")
                 
                 # Appel direct à l'outil unifié
-                # Note: Assure-toi d'importer find_movie_smart depuis mcp
-                # from .mcp import find_movie_smart 
-                
                 result = await mcp_tools.find_movie_smart(movie_title)
                 
                 if result and "error" not in result:
@@ -57,7 +52,6 @@ async def ask_hephaestus(request: ChatRequest):
                 else:
                     tool_result = {"found": False, "message": "Introuvable."}
 
-                # --- ÉTAPE 4 : SYNTHÈSE (Réponse à l'utilisateur) ---
                 writer_system_prompt = """
                 Tu es Popcorn 🍿, l'expert cinéma. 
                 Utilise les DONNÉES TECHNIQUES ci-dessous pour répondre à l'utilisateur.
@@ -85,5 +79,5 @@ async def ask_hephaestus(request: ChatRequest):
             print(f"[!] Erreur Pipeline: {e}")
             return {"response": "Oups, petit souci technique en allant chercher les infos 🍿."}
 
-    # Cas standard (Conversation)
+    # Cas standard (small talk)
     return {"response": raw_response}

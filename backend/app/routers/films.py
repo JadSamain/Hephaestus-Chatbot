@@ -1,7 +1,9 @@
+# Import FastAPI
 from fastapi import APIRouter, HTTPException, Query
 from typing import Optional
 from app.services.movies_service import movies_service
 
+# Création du router
 router = APIRouter(prefix="/films", tags=["films"])
 
 @router.get("/")

@@ -6,12 +6,12 @@ from typing import Optional, Dict, Any
 from mcp.server.fastmcp import FastMCP
 from playwright.async_api import async_playwright
 
-# --- CONFIGURATION ---
+# Configuration du MCP
 mcp = FastMCP("movie-smart-search")
 CSV_PATH = "data/movies_catalog.csv" # Vérifie que ce chemin est bon par rapport à ton lancement
 BASE_URL = "https://www.movieofthenight.com"
 
-# --- CHARGEMENT DU CSV ---
+# Chargement du CSV
 def load_csv():
     if os.path.exists(CSV_PATH):
         # Important: le séparateur est le point-virgule selon ton fichier
@@ -33,8 +33,7 @@ def save_csv():
 def normalize(text):
     return str(text).lower().strip() if text else ""
 
-# --- LE CŒUR DU SYSTÈME ---
-
+# MCP
 @mcp.tool()
 async def find_movie_smart(title: str) -> Dict[str, Any]:
     """
@@ -45,8 +44,8 @@ async def find_movie_smart(title: str) -> Dict[str, Any]:
     global DF
     print(f"[SMART SEARCH] Recherche : {title}")
     
-    # 1. RECHERCHE LOCALE
-    # On cherche si le titre existe (case insensitive)
+    # Recherche locale
+    # Le script cherche dans le CSV local si le film existe
     mask = DF['title'].apply(normalize).str.contains(normalize(title), na=False)
     results = DF[mask]
     
@@ -55,7 +54,7 @@ async def find_movie_smart(title: str) -> Dict[str, Any]:
         # Convertit la ligne en dictionnaire propre (remplace NaN par None)
         return results.iloc[0].where(pd.notnull(results.iloc[0]), None).to_dict()
 
-    # 2. SCRAPING (Si pas trouvé)
+    # Scraping (Si pas trouvé)
     print("[CACHE MISS] Lancement du scraping Playwright...")
     scraped_data = await scrape_movie_data(title)
     

@@ -47,13 +47,13 @@ def chat_orchestrator(user_input, conversation_history):
     # Construction de la payload complète pour Ollama
     messages_payload = [{"role": "system", "content": system_prompt}] + conversation_history
     
-    # 2. Premier appel (Décision)
+    # Premier appel (Décision)
     raw_response = query_ollama(messages_payload)
     
     final_response_text = raw_response
     movie_data = None
 
-    # 3. Détection d'appel d'outil
+    # Détection d'appel d'outil
     try:
         # Tentative de parsing JSON pour voir si c'est un outil
         tool_call = json.loads(raw_response)
@@ -62,18 +62,18 @@ def chat_orchestrator(user_input, conversation_history):
             tool_name = tool_call["tool"]
             args = tool_call["args"]
             
-            # 4. Exécution de l'outil
+            # Exécution de l'outil
             tool_result = TOOLS[tool_name](args)
             movie_data = tool_result # Stockage pour le frontend
             
-            # 5. Injection du résultat (Context Injection)
+            # Injection du résultat (Context Injection)
             conversation_history.append({"role": "assistant", "content": raw_response})
             conversation_history.append({
                 "role": "system", 
                 "content": f"RÉSULTAT OUTIL: {json.dumps(tool_result)}. Utilise ces infos pour répondre à l'utilisateur."
             })
             
-            # 6. Deuxième appel (Synthèse finale)
+            # Deuxième appel (Synthèse finale)
             messages_payload = [{"role": "system", "content": system_prompt}] + conversation_history
             final_response_text = query_ollama(messages_payload)
             
@@ -84,7 +84,7 @@ def chat_orchestrator(user_input, conversation_history):
     # Mise à jour historique
     conversation_history.append({"role": "assistant", "content": final_response_text})
 
-    # 7. Formatage Sortie Frontend
+    # Formatage Sortie Frontend
     return build_frontend_response(final_response_text, movie_data)
 
 def build_frontend_response(text_message, data=None):
@@ -104,6 +104,6 @@ def build_frontend_response(text_message, data=None):
         
     return response
 
-# --- Test ---
+# Test de l'agent
 history = []
 print(json.dumps(chat_orchestrator("Où voir Inception ?", history), indent=2))
