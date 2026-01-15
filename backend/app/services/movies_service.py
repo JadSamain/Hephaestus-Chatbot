@@ -98,14 +98,17 @@ class MoviesService:
         
         categories = {}
         for movie in movies:
-            genre = movie.get("genre", "Autres")
-            if not genre or genre == "":
-                genre = "Autres"
+            genre_raw = movie.get("genre", "Autres")
+            if not genre_raw or genre_raw == "":
+                genre_raw = "Autres"
             
-            if genre not in categories:
-                categories[genre] = []
+            # Split by comma and take the first one as primary genre
+            primary_genre = genre_raw.split(",")[0].strip()
             
-            categories[genre].append(movie)
+            if primary_genre not in categories:
+                categories[primary_genre] = []
+            
+            categories[primary_genre].append(movie)
         
         # Format for frontend
         result = []
