@@ -42,7 +42,7 @@ ollama create Hephaestus-v1 -f Modelfile
 Le backend gère l'API FastAPI et l'agent de scraping (MCP).
 
 ```bash
-# Accéder au dossier (si applicable) ou rester à la racine
+# Accéder au dossier backend
 # Créer un environnement virtuel
 python -m venv venv
 source venv/bin/activate  # (ou venv\Scripts\activate.ps1 sous Windows)
