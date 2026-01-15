@@ -548,3 +548,59 @@
     font-size: 1rem;
     margin: 0;
 }
+
+/* Scroll Controls - Enhanced */
+.row-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.scroll-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0;
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.row-container:hover .scroll-btn {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.scroll-btn:hover {
+    background: #FFD700;
+    color: #000;
+    transform: translateY(-50%) scale(1.15);
+    box-shadow: 0 8px 20px rgba(255, 215, 0, 0.4);
+    border-color: transparent;
+}
+
+.scroll-btn:active {
+    transform: translateY(-50%) scale(0.95);
+}
+
+.scroll-btn.left {
+    left: -24px;
+}
+
+.scroll-btn.right {
+    right: 0px;
+}

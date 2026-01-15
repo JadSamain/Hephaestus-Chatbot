@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import logo from "../img/logo.png";
 import MovieDetailsSidebar from "../components/MovieDetailsSidebar.jsx";
+import CategoryRow from "../components/CategoryRow.jsx";
 import "../Films.css";
 
 export default function Films() {
@@ -124,29 +125,15 @@ export default function Films() {
                         </div>
                     ) : filteredCategories.length > 0 ? (
                         filteredCategories.map((category, index) => (
-                            <div key={index} className="category-section">
-                                <h3 className="category-title">{category.title}</h3>
-                                <div className="movie-row">
-                                    {category.movies.map((movie) => (
-                                        <div
-                                            key={movie.id}
-                                            className="movie-card"
-                                            onClick={() => {
-                                                setSelectedMovie(movie);
-                                                setIsSidebarOpen(true);
-                                            }}
-                                        >
-                                            <div className="movie-poster-wrapper">
-                                                <img src={movie.poster} alt={movie.title} className="movie-poster" />
-                                                <div className="movie-rating">{movie.rating}</div>
-                                            </div>
-                                            <div className="movie-info">
-                                                <h4>{movie.title}</h4>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
+                            <CategoryRow
+                                key={index}
+                                title={category.title}
+                                movies={category.movies}
+                                onMovieClick={(movie) => {
+                                    setSelectedMovie(movie);
+                                    setIsSidebarOpen(true);
+                                }}
+                            />
                         ))
                     ) : (
                         <div className="empty-state">
