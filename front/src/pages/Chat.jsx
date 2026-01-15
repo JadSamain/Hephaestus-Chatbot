@@ -40,27 +40,38 @@ export default function Chat() {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
 
+    // Fonction pour définir les étapes de chargement (simulation d'IA)
     const getLoadingSteps = (input) => {
-        const lowerInput = input.toLowerCase();
-        const movieKeywords = ['film', 'movie', 'acteur', 'réalisateur', 'voir', 'regarder', 'genre', 'série', 'show', 'cinema'];
+        let texteMinuscule = input.toLowerCase();
+        let motsCles = ['film', 'movie', 'acteur', 'réalisateur', 'voir', 'regarder', 'genre', 'série', 'show', 'cinema'];
 
-        if (movieKeywords.some(keyword => lowerInput.includes(keyword))) {
+        // On regarde si un mot clé est présent
+        let trouve = false;
+        for (let i = 0; i < motsCles.length; i++) {
+            if (texteMinuscule.includes(motsCles[i])) {
+                trouve = true;
+                break;
+            }
+        }
+
+        if (trouve) {
             return {
                 steps: ["Popcorn cherche dans les archives...", "Analyse des critiques IMDb...", "Comparaison des plateformes...", "Rédaction de votre réponse..."],
                 interval: 2500
             };
+        } else {
+            return {
+                steps: ["Popcorn réfléchit..."],
+                interval: 1000
+            };
         }
-
-        return {
-            steps: ["Popcorn réfléchit..."],
-            interval: 1000
-        };
     };
 
     useEffect(() => {
         scrollToBottom();
     }, [messages]);
 
+    // Créer une nouvelle conversation
     const createNewChat = () => {
         const newChat = {
             id: Date.now(),
@@ -68,18 +79,31 @@ export default function Chat() {
             messages: [],
             date: new Date().toISOString()
         };
-        let newTableau = [newChat];
+
+        // On crée un nouveau tableau et on met la nouvelle conv au début
+        let newTableau = [];
+        newTableau.push(newChat);
+
         for (let i = 0; i < conversations.length; i++) {
             newTableau.push(conversations[i]);
         }
+
         setConversations(newTableau);
         setCurrentChatId(newChat.id);
         setMessages([]);
         setIsSidebarOpen(false);
     };
 
+    // Charger une conversation existante
     const loadConversation = (chatId) => {
-        const chat = conversations.find(c => c.id === chatId);
+        let chat = null;
+        for (let i = 0; i < conversations.length; i++) {
+            if (conversations[i].id === chatId) {
+                chat = conversations[i];
+                break;
+            }
+        }
+
         if (chat) {
             setCurrentChatId(chatId);
             setMessages(chat.messages);
@@ -87,43 +111,60 @@ export default function Chat() {
         }
     };
 
+    // Mettre à jour une conversation avec de nouveaux messages
     const updateConversation = (chatId, newMessages) => {
-        setConversations(prevConversations => {
-            return prevConversations.map(chat => {
-                if (chat.id === chatId) {
-                    let updatedChat = { ...chat, messages: newMessages };
-                    if (newMessages.length > 0 && chat.title === "Nouvelle conversation") {
-                        const firstMsg = newMessages[0];
-                        if (firstMsg.sender === 'user') {
-                            updatedChat.title = firstMsg.text.substring(0, 20) + "...";
-                        }
+        let nouveauTableau = [];
+
+        for (let i = 0; i < conversations.length; i++) {
+            let chat = conversations[i];
+
+            if (chat.id === chatId) {
+                // On copie l'objet chat pour ne pas modifier l'original directement
+                let updatedChat = { ...chat };
+                updatedChat.messages = newMessages;
+
+                // Si c'est le tout premier message, on change le titre
+                if (newMessages.length > 0 && chat.title === "Nouvelle conversation") {
+                    let premierMessage = newMessages[0];
+                    if (premierMessage.sender === 'user') {
+                        updatedChat.title = premierMessage.text.substring(0, 20) + "...";
                     }
-                    return updatedChat;
                 }
-                return chat;
-            });
-        });
+                nouveauTableau.push(updatedChat);
+            } else {
+                nouveauTableau.push(chat);
+            }
+        }
+
+        setConversations(nouveauTableau);
     };
 
+    // Demander la confirmation pour supprimer
     const deleteConversation = (e, chatId) => {
         e.stopPropagation();
         setChatToDeleteId(chatId);
         setIsDeleteModalOpen(true);
     };
 
+    // Confirmer la suppression
     const confirmDeleteConversation = () => {
         if (chatToDeleteId) {
             let newConversations = [];
+
+            // On garde tout sauf celui qu'on veut supprimer
             for (let i = 0; i < conversations.length; i++) {
                 if (conversations[i].id !== chatToDeleteId) {
                     newConversations.push(conversations[i]);
                 }
             }
+
+            // Si on supprime la conversation active
             if (chatToDeleteId === currentChatId) {
                 if (newConversations.length > 0) {
                     setConversations(newConversations);
                     loadConversation(newConversations[0].id);
                 } else {
+                    // S'il n'y a plus de conversation, on en recrée une vide
                     const newChat = {
                         id: Date.now(),
                         title: "Nouvelle conversation",
@@ -148,13 +189,16 @@ export default function Chat() {
         setChatToDeleteId(null);
     };
 
+    // Fonction pour envoyer un message
     const handleSendMessage = async (e) => {
         e.preventDefault();
 
+        // On ne fait rien si le champ est vide
         if (inputValue === "") {
             return;
         }
 
+        // Calcul de l'heure actuelle
         let now = new Date();
         let hours = now.getHours();
         let minutes = now.getMinutes();
@@ -168,13 +212,20 @@ export default function Chat() {
             timestamp: timeString
         };
 
-        const updatedMessages = [...messages, userMessage];
+        // On ajoute le message à la liste locale
+        let updatedMessages = [];
+        for (let i = 0; i < messages.length; i++) {
+            updatedMessages.push(messages[i]);
+        }
+        updatedMessages.push(userMessage);
+
         setMessages(updatedMessages);
         updateConversation(currentChatId, updatedMessages);
 
         const currentInput = inputValue;
         setInputValue("");
 
+        // Gestion du chargement faux (pour faire joli)
         const loadingConfig = getLoadingSteps(currentInput);
         const steps = loadingConfig.steps;
 
@@ -189,6 +240,7 @@ export default function Chat() {
             }
         }, loadingConfig.interval);
 
+        // Appel au backend
         try {
             const donnee = { prompt: currentInput };
 
@@ -204,6 +256,8 @@ export default function Chat() {
             }
 
             const data = await response.json();
+
+            // Si le scraping a échoué mais qu'on a une réponse partielle
             if (data.error === "scraping_failed") {
                 const botMessage = {
                     id: Date.now() + 1,
@@ -214,7 +268,10 @@ export default function Chat() {
                     content: null
                 };
 
-                const finalMessages = [...updatedMessages, botMessage];
+                let finalMessages = [];
+                for (let i = 0; i < updatedMessages.length; i++) finalMessages.push(updatedMessages[i]);
+                finalMessages.push(botMessage);
+
                 setMessages(finalMessages);
                 updateConversation(currentChatId, finalMessages);
                 return;
@@ -224,6 +281,7 @@ export default function Chat() {
             let msgType = 'text';
             let movieData = null;
 
+            // On essaie de voir si c'est du JSON (recommandation)
             try {
                 if (data.response.trim().startsWith('{')) {
                     const parsed = JSON.parse(data.response);
@@ -234,6 +292,7 @@ export default function Chat() {
                     }
                 }
             } catch (e) {
+                // Ce n'était pas du JSON, pas grave
             }
 
             const botMessage = {
@@ -245,7 +304,10 @@ export default function Chat() {
                 content: movieData
             };
 
-            const finalMessages = [...updatedMessages, botMessage];
+            let finalMessages = [];
+            for (let i = 0; i < updatedMessages.length; i++) finalMessages.push(updatedMessages[i]);
+            finalMessages.push(botMessage);
+
             setMessages(finalMessages);
             updateConversation(currentChatId, finalMessages);
 
