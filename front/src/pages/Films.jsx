@@ -7,6 +7,7 @@ import "../Films.css";
 
 export default function Films() {
     const [selectedPlatform, setSelectedPlatform] = useState("All");
+    const [searchQuery, setSearchQuery] = useState(""); // Search State
     const [selectedMovie, setSelectedMovie] = useState(null);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [categories, setCategories] = useState([]);
@@ -55,9 +56,11 @@ export default function Films() {
 
     const filteredCategories = categories.map(category => ({
         ...category,
-        movies: category.movies.filter(movie =>
-            selectedPlatform === "All" || movie.platforms.includes(selectedPlatform)
-        )
+        movies: category.movies.filter(movie => {
+            const matchesPlatform = selectedPlatform === "All" || movie.platforms.includes(selectedPlatform);
+            const matchesSearch = movie.title.toLowerCase().includes(searchQuery.toLowerCase());
+            return matchesPlatform && matchesSearch;
+        })
     })).filter(category => category.movies.length > 0);
 
     return (
@@ -91,6 +94,13 @@ export default function Films() {
                         <Link to="/" className="back-btn">← Retour</Link>
                     </div>
                     <div className="header-right">
+                        <input
+                            type="text"
+                            className="search-input"
+                            placeholder="Rechercher un film..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
                         <select
                             className="platform-filter"
                             value={selectedPlatform}
