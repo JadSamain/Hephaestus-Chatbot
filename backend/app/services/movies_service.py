@@ -4,11 +4,8 @@ from typing import List, Dict, Optional
 
 class MoviesService:
     def __init__(self, csv_path: str = None):
-        """Initialize the movies service with the CSV file path."""
         if csv_path is None:
-            # Get the directory where this file is located
             current_dir = os.path.dirname(os.path.abspath(__file__))
-            # Go up two levels to backend directory, then into data
             backend_dir = os.path.dirname(os.path.dirname(current_dir))
             csv_path = os.path.join(backend_dir, "data", "movies_catalog.csv")
         
@@ -18,7 +15,6 @@ class MoviesService:
         self._load_data()
     
     def _is_file_modified(self) -> bool:
-        """Check if the CSV file has been modified since last load."""
         try:
             if not os.path.exists(self.csv_path):
                 return False
@@ -28,27 +24,17 @@ class MoviesService:
             return False
 
     def _load_data(self):
-        """Load the CSV file into a pandas DataFrame."""
         try:
             if os.path.exists(self.csv_path):
-                # Update modification time BEFORE loading to avoid race conditions
                 self._last_modified_time = os.path.getmtime(self.csv_path)
-                
-                # Load CSV with semicolon delimiter and handle comma as decimal separator
                 self.df = pd.read_csv(self.csv_path, sep=';', decimal=',')
-                print(f"✓ Loaded {len(self.df)} movies from {self.csv_path}")
             else:
-                print(f"⚠ CSV file not found at {self.csv_path}")
                 self.df = pd.DataFrame()
-        except Exception as e:
-            print(f"✗ Error loading CSV: {e}")
+        except Exception:
             self.df = pd.DataFrame()
     
     def get_all_movies(self) -> List[Dict]:
-        """Retrieve all movies from the CSV."""
-        # Check for updates before returning data
         if self._is_file_modified():
-            print("↻ CSV file changed, reloading data...")
             self._load_data()
             
         if self.df is None or self.df.empty:
@@ -56,9 +42,7 @@ class MoviesService:
         
         movies = []
         for _, row in self.df.iterrows():
-            # Mapping des colonnes du CSV vers le format attendu
             try:
-                # Gestion des plateformes (peut être vide ou null)
                 platforms_raw = row.get("platforms", "")
                 platforms_list = self._parse_platforms(platforms_raw)
                 
@@ -75,14 +59,12 @@ class MoviesService:
                     "actors": [a.strip() for a in str(row.get("starring", "")).split(",")[:3]] if pd.notna(row.get("starring")) else []
                 }
                 movies.append(movie)
-            except Exception as e:
-                print(f"[ERROR] Error parsing movie row: {e}")
+            except Exception:
                 continue
         
         return movies
     
     def filter_by_platform(self, platform: str) -> List[Dict]:
-        """Filter movies by streaming platform."""
         all_movies = self.get_all_movies()
         
         if platform.lower() == "all":
@@ -96,7 +78,6 @@ class MoviesService:
         return filtered
     
     def group_by_category(self, platform: Optional[str] = None) -> Dict[str, List[Dict]]:
-        """Group movies by genre/category."""
         movies = self.filter_by_platform(platform) if platform else self.get_all_movies()
         
         categories = {}
@@ -105,7 +86,6 @@ class MoviesService:
             if not genre_raw or genre_raw == "":
                 genre_raw = "Autres"
             
-            # Split by comma and take the first one as primary genre
             primary_genre = genre_raw.split(",")[0].strip()
             
             if primary_genre not in categories:
@@ -113,7 +93,6 @@ class MoviesService:
             
             categories[primary_genre].append(movie)
         
-        # Format for frontend
         result = []
         for category_name, category_movies in categories.items():
             result.append({
@@ -124,7 +103,6 @@ class MoviesService:
         return result
     
     def get_available_platforms(self) -> List[str]:
-        """Get list of all available streaming platforms."""
         all_movies = self.get_all_movies()
         platforms = set()
         
@@ -134,15 +112,12 @@ class MoviesService:
         return sorted(list(platforms))
     
     def _parse_platforms(self, platforms_str) -> List[str]:
-        """Parse platforms string into a list."""
         if pd.isna(platforms_str) or platforms_str == "":
             return []
         
-        # Si c'est déjà une liste
         if isinstance(platforms_str, list):
             return platforms_str
         
-        # Si c'est une chaîne séparée par des virgules ou des points-virgules
         platforms_str = str(platforms_str)
         if "," in platforms_str:
             return [p.strip() for p in platforms_str.split(",")]
@@ -151,5 +126,4 @@ class MoviesService:
         else:
             return [platforms_str.strip()]
 
-# Instance globale du service
 movies_service = MoviesService()
