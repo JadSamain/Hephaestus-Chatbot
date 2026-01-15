@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import MovieCard from "../components/MovieCard.jsx";
 import ConfirmationModal from "../components/ConfirmationModal.jsx";
 import "../App.css";
-
 import logo from "../img/logo.png";
 
 export default function Chat() {
@@ -11,32 +10,26 @@ export default function Chat() {
     const [currentChatId, setCurrentChatId] = useState(null);
     const [messages, setMessages] = useState([]);
     const [inputValue, setInputValue] = useState("");
-    const [loadingMessage, setLoadingMessage] = useState(""); // État pour le message de chargement
-    const [loadingChatId, setLoadingChatId] = useState(null); // ID de la conv qui charge
+    const [loadingMessage, setLoadingMessage] = useState("");
+    const [loadingChatId, setLoadingChatId] = useState(null);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const [searchTerm, setSearchTerm] = useState(""); // Recherche
-    const [isSearchVisible, setIsSearchVisible] = useState(false); // Afficher/Masquer barre recherche
-
-    // State pour la modale de suppression
+    const [searchTerm, setSearchTerm] = useState("");
+    const [isSearchVisible, setIsSearchVisible] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [chatToDeleteId, setChatToDeleteId] = useState(null);
     const messagesEndRef = useRef(null);
 
-
-    // Charger l'historique au démarrage
     useEffect(() => {
         const savedConversations = JSON.parse(localStorage.getItem("popcorn_history") || "[]");
         setConversations(savedConversations);
 
         if (savedConversations.length > 0) {
-            // Charger la dernière conversation ou créer une nouvelle
             loadConversation(savedConversations[0].id);
         } else {
             createNewChat();
         }
     }, []);
 
-    // Sauvegarder les conversations à chaque changement
     useEffect(() => {
         if (conversations.length > 0) {
             localStorage.setItem("popcorn_history", JSON.stringify(conversations));
@@ -47,20 +40,17 @@ export default function Chat() {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
 
-    // Helper pour déterminer les étapes de chargement
     const getLoadingSteps = (input) => {
         const lowerInput = input.toLowerCase();
         const movieKeywords = ['film', 'movie', 'acteur', 'réalisateur', 'voir', 'regarder', 'genre', 'série', 'show', 'cinema'];
 
-        // Si ça ressemble à une requête cinéma => Processus long (Scraping)
         if (movieKeywords.some(keyword => lowerInput.includes(keyword))) {
             return {
                 steps: ["Popcorn cherche dans les archives...", "Analyse des critiques IMDb...", "Comparaison des plateformes...", "Rédaction de votre réponse..."],
-                interval: 2500 // 2.5 secondes par étape
+                interval: 2500
             };
         }
 
-        // Sinon, chargement générique => Processus rapide (LLM pur)
         return {
             steps: ["Popcorn réfléchit..."],
             interval: 1000
@@ -71,10 +61,6 @@ export default function Chat() {
         scrollToBottom();
     }, [messages]);
 
-    // ... (unchanged code)
-
-
-
     const createNewChat = () => {
         const newChat = {
             id: Date.now(),
@@ -82,7 +68,6 @@ export default function Chat() {
             messages: [],
             date: new Date().toISOString()
         };
-        // On rajoute au début
         let newTableau = [newChat];
         for (let i = 0; i < conversations.length; i++) {
             newTableau.push(conversations[i]);
@@ -106,10 +91,7 @@ export default function Chat() {
         setConversations(prevConversations => {
             return prevConversations.map(chat => {
                 if (chat.id === chatId) {
-                    // Création d'une copie de l'objet chat pour éviter la mutation
                     let updatedChat = { ...chat, messages: newMessages };
-
-                    // Mise à jour du titre si nécessaire
                     if (newMessages.length > 0 && chat.title === "Nouvelle conversation") {
                         const firstMsg = newMessages[0];
                         if (firstMsg.sender === 'user') {
@@ -137,16 +119,11 @@ export default function Chat() {
                     newConversations.push(conversations[i]);
                 }
             }
-
-            // Si on supprime la conversation courante
             if (chatToDeleteId === currentChatId) {
                 if (newConversations.length > 0) {
                     setConversations(newConversations);
                     loadConversation(newConversations[0].id);
                 } else {
-                    // Si plus aucune conversation, on en crée une vierge directement
-                    // pour éviter d'utiliser la state 'conversations' qui n'est pas encore mise à jour
-                    // si on appelait createNewChat()
                     const newChat = {
                         id: Date.now(),
                         title: "Nouvelle conversation",
@@ -159,7 +136,6 @@ export default function Chat() {
                     setIsSidebarOpen(false);
                 }
             } else {
-                // Si on supprime une autre conversation que la courante
                 setConversations(newConversations);
             }
         }
@@ -176,18 +152,15 @@ export default function Chat() {
         e.preventDefault();
 
         if (inputValue === "") {
-            // Pas de message vide
             return;
         }
 
-        // On crée la date à la main
         let now = new Date();
         let hours = now.getHours();
         let minutes = now.getMinutes();
         if (minutes < 10) minutes = "0" + minutes;
         let timeString = hours + ":" + minutes;
 
-        // Message de l'utilisateur
         const userMessage = {
             id: Date.now(),
             text: inputValue,
@@ -202,7 +175,6 @@ export default function Chat() {
         const currentInput = inputValue;
         setInputValue("");
 
-        // Séquence de chargement simple ou complexe
         const loadingConfig = getLoadingSteps(currentInput);
         const steps = loadingConfig.steps;
 
@@ -210,7 +182,6 @@ export default function Chat() {
         setLoadingChatId(currentChatId);
         let stepIndex = 0;
 
-        // On change le message en fonction de l'intervalle défini
         const intervalId = setInterval(() => {
             stepIndex++;
             if (stepIndex < steps.length) {
@@ -219,7 +190,6 @@ export default function Chat() {
         }, loadingConfig.interval);
 
         try {
-            // On prépare les données pour le back
             const donnee = { prompt: currentInput };
 
             const response = await fetch('http://localhost:8000/chat/', {
@@ -234,7 +204,6 @@ export default function Chat() {
             }
 
             const data = await response.json();
-            // Gestion de l'erreur de scraping
             if (data.error === "scraping_failed") {
                 const botMessage = {
                     id: Date.now() + 1,
@@ -248,29 +217,25 @@ export default function Chat() {
                 const finalMessages = [...updatedMessages, botMessage];
                 setMessages(finalMessages);
                 updateConversation(currentChatId, finalMessages);
-                return; // On arrête là pour ce cas
+                return;
             }
 
-            // On essaie de voir si c'est du JSON (film) ou du texte normal
             let botText = data.response;
             let msgType = 'text';
             let movieData = null;
 
             try {
-                // On tente de parser la réponse si c'est un JSON valide
                 if (data.response.trim().startsWith('{')) {
                     const parsed = JSON.parse(data.response);
                     if (parsed.type === 'movie_recommendation') {
                         msgType = 'movie';
                         movieData = parsed;
-                        botText = "Voici une recommandation pour vous :"; // Texte de fallback ou titre
+                        botText = "Voici une recommandation pour vous :";
                     }
                 }
             } catch (e) {
-                // Si ça échoue, c'est juste du texte normal
             }
 
-            // Réponse de l'IA
             const botMessage = {
                 id: Date.now() + 1,
                 text: botText,
@@ -280,7 +245,6 @@ export default function Chat() {
                 content: movieData
             };
 
-            // On ajoute la réponse
             const finalMessages = [...updatedMessages, botMessage];
             setMessages(finalMessages);
             updateConversation(currentChatId, finalMessages);
@@ -288,7 +252,6 @@ export default function Chat() {
         } catch (error) {
             alert("Impossible de contacter le serveur");
         } finally {
-            // On nettoie tout
             clearInterval(intervalId);
             setLoadingMessage("");
             setLoadingChatId(null);
@@ -297,10 +260,11 @@ export default function Chat() {
 
     return (
         <div className="app-container">
-            {/* Sidebar */}
             <div className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
                 <div className="sidebar-header">
-                    <img src={logo} alt="Popcorn Chat Logo" className="sidebar-logo" />
+                    <Link to="/">
+                        <img src={logo} alt="Popcorn Chat Logo" className="sidebar-logo" />
+                    </Link>
                 </div>
                 <button onClick={createNewChat} className="new-chat-btn">
                     <span>+</span> Nouvelle conversation
@@ -326,18 +290,15 @@ export default function Chat() {
                         if (searchTerm === "") {
                             filteredConversations = conversations;
                         } else {
-                            // Style étudiant : boucle for simple et recherche profonde
                             for (let i = 0; i < conversations.length; i++) {
                                 let found = false;
                                 const chat = conversations[i];
                                 const searchLower = searchTerm.toLowerCase();
 
-                                // 1. Vérifier le titre
                                 if (chat.title.toLowerCase().includes(searchLower)) {
                                     found = true;
                                 }
 
-                                // 2. Vérifier les messages si pas trouvé dans le titre
                                 if (!found && chat.messages) {
                                     for (let j = 0; j < chat.messages.length; j++) {
                                         if (chat.messages[j].text && chat.messages[j].text.toLowerCase().includes(searchLower)) {
@@ -372,12 +333,11 @@ export default function Chat() {
                     })()}
                 </div>
 
-                <Link to="/" className="back-btn" style={{ marginTop: 'auto' }}>
-                    ← Menu Principal
+                <Link to="/films" className="back-btn" style={{ marginTop: 'auto' }}>
+                    ← Explorer les films
                 </Link>
             </div>
 
-            {/* Main Chat Area */}
             <div className="chat-container">
                 <button
                     className="mobile-menu-btn"
@@ -397,7 +357,6 @@ export default function Chat() {
                 <div className="chat-messages">
                     {messages.length === 0 ? (
                         <div className="empty-state">
-                            {/* <div className="empty-state-icon">🎬</div> */}
                             <p>Qu’est-ce qui vous intéresse aujourd’hui ?</p>
                         </div>
                     ) : (

@@ -7,7 +7,7 @@ import "../Films.css";
 
 export default function Films() {
     const [selectedPlatform, setSelectedPlatform] = useState("All");
-    const [searchQuery, setSearchQuery] = useState(""); // Search State
+    const [searchQuery, setSearchQuery] = useState("");
     const [selectedMovie, setSelectedMovie] = useState(null);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [categories, setCategories] = useState([]);
@@ -23,7 +23,6 @@ export default function Films() {
                 setLoading(true);
                 setError(null);
 
-                // Fetch platforms
                 const platformsResponse = await fetch("http://localhost:8000/films/platforms");
                 if (!platformsResponse.ok) {
                     throw new Error("Erreur lors du chargement des plateformes");
@@ -31,7 +30,6 @@ export default function Films() {
                 const platformsData = await platformsResponse.json();
                 setPlatformsList(platformsData.platforms || []);
 
-                // Fetch films grouped by category
                 const filmsResponse = await fetch("http://localhost:8000/films/");
                 if (!filmsResponse.ok) {
                     throw new Error("Erreur lors du chargement des films");
@@ -40,7 +38,7 @@ export default function Films() {
                 setCategories(filmsData.categories || []);
             } catch (err) {
                 setError(err.message);
-                console.error("Error fetching data:", err);
+                console.error(err);
             } finally {
                 setLoading(false);
             }
@@ -48,7 +46,6 @@ export default function Films() {
 
         fetchData();
     }, []);
-
 
     const scrollToSection = (ref) => {
         ref.current?.scrollIntoView({ behavior: "smooth" });
@@ -71,17 +68,11 @@ export default function Films() {
                     <span className="brand-name">POPCORN</span>
                 </div>
                 <div className="nav-links">
-                    <span
-                        className="nav-link"
-                        onClick={() => scrollToSection(filmsRef)}
-                    >
+                    <span className="nav-link" onClick={() => scrollToSection(filmsRef)}>
                         Films
                     </span>
                     <Link to="/chat" className="nav-btn-framed">ChatBot</Link>
-                    <span
-                        className="nav-link"
-                        onClick={() => scrollToSection(aboutRef)}
-                    >
+                    <span className="nav-link" onClick={() => scrollToSection(aboutRef)}>
                         À propos
                     </span>
                 </div>

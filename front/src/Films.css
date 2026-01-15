@@ -224,7 +224,7 @@
     font-weight: 600;
     margin-bottom: 1rem;
     color: #fff;
-    font-family: 'Playfair Display', serif;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
     letter-spacing: -0.02em;
 }
 

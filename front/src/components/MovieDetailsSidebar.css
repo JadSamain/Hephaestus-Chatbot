@@ -159,3 +159,35 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* Movie Details Styles - Enhanced */
+.synopsis-text {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: #ccc;
+    margin-bottom: 0.5rem;
+}
+
+.director-name {
+    color: #FFD700;
+    font-weight: 500;
+    font-size: 1rem;
+}
+
+.actors-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    /* Increased gap from 0.5rem to 1rem */
+}
+
+.actor-badge {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 0.4rem 1rem;
+    /* Slightly larger padding */
+    border-radius: 20px;
+    font-size: 0.9rem;
+    color: #e0e0e0;
+    white-space: nowrap;
+}
