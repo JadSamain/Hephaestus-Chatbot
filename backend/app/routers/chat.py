@@ -6,8 +6,8 @@ from typing import Dict, Any
 
 # Importe ton service LLM existant
 from app.services.llm_service import llm_service
-# IMPORT CRITIQUE : Le module de Mehdi
-import app.mcp as mcp_tools 
+# Import du MCP
+from . import mcp as mcp_tools
 
 router = APIRouter(prefix="/chat", tags=["AI"])
 
@@ -25,10 +25,13 @@ async def ask_hephaestus(request: ChatRequest):
     # --- ÉTAPE 1 : ROUTING (LLM Décide) ---
     # Le LLM décide s'il faut chercher un film
     raw_response = await llm_service.generate_response(user_prompt)
+    print(f"[DEBUG LLM] Réponse brute : {raw_response}")
     
     # --- ÉTAPE 2 : DÉTECTION D'OUTIL ---
     # On cherche le pattern JSON strict
     json_match = re.search(r'\{.*\}', raw_response, re.DOTALL)
+    if json_match:
+        print("[DEBUG] JSON détecté, lancement de l'outil...")
 
     if json_match:
         try:
@@ -52,13 +55,19 @@ async def ask_hephaestus(request: ChatRequest):
                 if not search_results:
                     tool_result = {"found": False, "message": "Film introuvable sur les plateformes suivies."}
                 else:
-                    # B. Récupération des détails (Si trouvé)
+                    # B. Récupération des détails via la clé correcte
                     best_match = search_results[0]
-                    movie_id = best_match.get("id") or best_match.get("internal_id")
                     
-                    # Récupération fiche complète (Note, Streaming, etc.)
-                    full_details = await mcp_tools.get_movie(movie_id)
-                    tool_result = full_details
+                    # On utilise explicitement 'show_id' (clé du CSV)
+                    movie_id = best_match.get("show_id")
+                    
+                    if movie_id is not None:
+                        # Récupération fiche complète avec cast propre
+                        full_details = await mcp_tools.get_movie(int(movie_id))
+                        tool_result = full_details
+                    else:
+                        print("[!] Erreur : show_id introuvable dans les résultats")
+                        tool_result = {"found": False, "message": "Erreur technique d'identification du film."}
 
                 # --- ÉTAPE 4 : SYNTHÈSE (Réponse à l'utilisateur) ---
                 writer_system_prompt = """

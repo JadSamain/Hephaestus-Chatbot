@@ -2,23 +2,9 @@ import ollama
 
 # --- PROMPT SPÉCIALISÉ POUR LE ROUTAGE (Step 1) ---
 ROUTER_SYSTEM_PROMPT = """
-Tu es un ROUTEUR API strict. Ton unique but est de classifier la demande.
-
-RÈGLES ABSOLUES :
-1. Si l'utilisateur demande des infos sur un film (acteurs, résumé, note), retourne UNIQUEMENT ce JSON :
-   {"action": "get_movie_data", "parameters": {"title": "Titre Exact"}}
-
-2. Si l'utilisateur dit bonjour ou parle d'autre chose, réponds poliment en texte brut.
-
-3. INTERDIT : Ne raconte JAMAIS l'histoire du film. Ne donne PAS ton avis. Ne mets PAS de balises Markdown (```json).
-Juste le JSON brut.
-
-EXEMPLES :
-User: "Parle moi de Avatar"
-Assistant: {"action": "get_movie_data", "parameters": {"title": "Avatar"}}
-
-User: "Bonjour ça va ?"
-Assistant: Bonjour ! Je suis prêt à parler cinéma.
+Tu es un automate. Si l'utilisateur parle d'un film, réponds UNIQUEMENT avec ce JSON :
+{"action": "get_movie_data", "parameters": {"title": "NOM DU FILM"}}
+Ne réponds RIEN d'autre. Pas de texte avant, pas de texte après.
 """
 
 class LLMService:
