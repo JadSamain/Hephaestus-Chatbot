@@ -11,7 +11,10 @@ const platformLogos = {
     "Paramount+": "https://upload.wikimedia.org/wikipedia/commons/a/a5/Paramount_Plus.svg",
     "Peacock": "https://upload.wikimedia.org/wikipedia/commons/d/d3/NBCUniversal_Peacock_Logo.svg",
     "Canal+": "https://upload.wikimedia.org/wikipedia/commons/1/1a/Canal%2B.svg",
-    "Crunchyroll": "https://upload.wikimedia.org/wikipedia/commons/f/f6/Crunchyroll_Logo.svg"
+    "Canal+": "https://upload.wikimedia.org/wikipedia/commons/1/1a/Canal%2B.svg",
+    "Crunchyroll": "https://upload.wikimedia.org/wikipedia/commons/f/f6/Crunchyroll_Logo.svg",
+    "Apple": "https://upload.wikimedia.org/wikipedia/commons/2/28/Apple_TV_Plus_Logo.svg",
+    "HBO Max": "https://upload.wikimedia.org/wikipedia/commons/1/17/HBO_Max_Logo.svg"
 };
 
 export default function MovieDetailsSidebar({ movie, isOpen, onClose }) {
@@ -36,7 +39,7 @@ export default function MovieDetailsSidebar({ movie, isOpen, onClose }) {
                     </div>
 
                     <div className="sidebar-info">
-                        <h2>{movie.title}</h2>
+                        <h2>{movie.title} <span className="sidebar-year">({movie.year})</span></h2>
 
                         {movie.synopsis && (
                             <div className="info-section">
