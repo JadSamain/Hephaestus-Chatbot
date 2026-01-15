@@ -51,14 +51,64 @@ export default function Films() {
         ref.current?.scrollIntoView({ behavior: "smooth" });
     };
 
-    const filteredCategories = categories.map(category => ({
-        ...category,
-        movies: category.movies.filter(movie => {
-            const matchesPlatform = selectedPlatform === "All" || movie.platforms.includes(selectedPlatform);
-            const matchesSearch = movie.title.toLowerCase().includes(searchQuery.toLowerCase());
-            return matchesPlatform && matchesSearch;
-        })
-    })).filter(category => category.movies.length > 0);
+    const [categoriesAffichees, setCategoriesAffichees] = useState([]);
+
+    // Effet de bord pour filtrer les films quand on cherche ou qu'on change de plateforme
+    useEffect(() => {
+        let resultats = [];
+
+        // On parcourt toutes les catégories
+        for (let i = 0; i < categories.length; i++) {
+            let categorie = categories[i];
+            let filmsFiltres = [];
+
+            // Pour chaque catégorie, on regarde les films un par un
+            for (let j = 0; j < categorie.movies.length; j++) {
+                let film = categorie.movies[j];
+                let gardeLeFilm = true;
+
+                // Test de la plateforme
+                if (selectedPlatform !== "All") {
+                    let plateformeTrouvee = false;
+                    for (let k = 0; k < film.platforms.length; k++) {
+                        if (film.platforms[k] === selectedPlatform) {
+                            plateformeTrouvee = true;
+                            break;
+                        }
+                    }
+                    if (plateformeTrouvee === false) {
+                        gardeLeFilm = false;
+                    }
+                }
+
+                // Test de la recherche (titre)
+                if (searchQuery !== "") {
+                    let titre = film.title.toLowerCase();
+                    let recherche = searchQuery.toLowerCase();
+                    if (titre.indexOf(recherche) === -1) {
+                        gardeLeFilm = false;
+                    }
+                }
+
+                // Si le film passe tous les tests, on le garde
+                if (gardeLeFilm) {
+                    filmsFiltres.push(film);
+                }
+            }
+
+            // Si la catégorie a encore des films, on l'ajoute à l'affichage
+            if (filmsFiltres.length > 0) {
+                let nouvelleCategorie = {
+                    title: categorie.title,
+                    movies: filmsFiltres
+                };
+                resultats.push(nouvelleCategorie);
+            }
+        }
+
+        setCategoriesAffichees(resultats);
+
+    }, [categories, searchQuery, selectedPlatform]);
 
     return (
         <div className="page films-page">
@@ -124,8 +174,8 @@ export default function Films() {
                                 Réessayer
                             </button>
                         </div>
-                    ) : filteredCategories.length > 0 ? (
-                        filteredCategories.map((category, index) => (
+                    ) : categoriesAffichees.length > 0 ? (
+                        categoriesAffichees.map((category, index) => (
                             <CategoryRow
                                 key={index}
                                 title={category.title}
