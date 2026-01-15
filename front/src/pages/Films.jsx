@@ -22,7 +22,7 @@ export default function Films() {
                 setError(null);
 
                 // Fetch platforms
-                const platformsResponse = await fetch("http://localhost:8001/films/platforms");
+                const platformsResponse = await fetch("http://localhost:8000/films/platforms");
                 if (!platformsResponse.ok) {
                     throw new Error("Erreur lors du chargement des plateformes");
                 }
@@ -30,7 +30,7 @@ export default function Films() {
                 setPlatformsList(platformsData.platforms || []);
 
                 // Fetch films grouped by category
-                const filmsResponse = await fetch("http://localhost:8001/films/");
+                const filmsResponse = await fetch("http://localhost:8000/films/");
                 if (!filmsResponse.ok) {
                     throw new Error("Erreur lors du chargement des films");
                 }
