@@ -319,6 +319,14 @@
     color: rgba(255, 255, 255, 0.9);
 }
 
+.movie-year {
+    display: block;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin-top: 0.25rem;
+    font-weight: 400;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .films-header {

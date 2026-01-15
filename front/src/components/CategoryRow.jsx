@@ -36,6 +36,7 @@ const CategoryRow = ({ title, movies, onMovieClick }) => {
                             </div>
                             <div className="movie-info">
                                 <h4>{movie.title}</h4>
+                                <span className="movie-year">{movie.year}</span>
                             </div>
                         </div>
                     ))}
